@@ -1,0 +1,48 @@
+import type { CharacterClasses } from "./types";
+
+export const heroes: CharacterClasses = [
+	{
+		id: "berserk",
+		background: "Берсерк",
+		keyStats: ["STR", "DEX"],
+		hitDie: 12,
+		startingHP: 20,
+		saves: ["STR+", "INT–"],
+		armor: "None",
+		weapons: ["all STR weapons"],
+		startingGear: ["Battleaxe", "Rations", "Rope"],
+	},
+	{
+		id: "shadowmancer",
+		background: "Shadowmancer",
+		keyStats: ["INT", "DEX"],
+		hitDie: 8,
+		startingHP: 13,
+		saves: ["INT+", "WIL–"],
+		armor: "Cloth Armor",
+		weapons: ["Blades", "Wands"],
+		startingGear: ["Adventurer's Garb", "Sickle", "Shovel"],
+	},
+	{
+		id: "stormshifter",
+		background: "Stormshifter",
+		keyStats: ["WIL", "DEX"],
+		hitDie: 8,
+		startingHP: 13,
+		saves: ["WIL+", "STR–"],
+		armor: "Cloth or Leather Armor",
+		weapons: ["Staves", "Wands"],
+		startingGear: ["Cheap Hides", "Staff", "Strange Plant"],
+	},
+	{
+		id: "ZEPHYR",
+		background: "ZEPHYR",
+		keyStats: ["DEX", "STR"],
+		hitDie: 8,
+		startingHP: 13,
+		saves: ["DEX+", "INT–"],
+		armor: "None",
+		weapons: ["Melee"],
+		startingGear: ["Staff", "Traveling Robes", "Sandals"],
+	},
+];
