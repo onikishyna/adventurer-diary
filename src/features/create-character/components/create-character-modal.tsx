@@ -1,4 +1,14 @@
+import type { ReactNode } from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { originIcons } from "@/entities/ancestry";
+import { classIcons } from "@/entities/character-classes";
+import { COLORS, FONTS, RADII } from "@/shared/theme";
+import {
+	ChevronLeftIcon,
+	ChevronRightIcon,
+	PersonIcon,
+	QuestBookIcon,
+} from "@/shared/ui/icons";
 import { STEPS, useCharacterDraft } from "../hooks/use-character-draft";
 import type { CharacterDraft, CreationStep } from "../types";
 import {
@@ -6,6 +16,7 @@ import {
 	StepClass,
 	StepInput,
 	StepOrigin,
+	StepSkills,
 	StepStats,
 	StepSummary,
 } from "./steps";
@@ -22,14 +33,79 @@ interface StepContentProps {
 	onUpdate: (patch: Partial<CharacterDraft>) => void;
 }
 
-const COLORS = {
-	background: "#F2EBDE",
-	dark: "#12131A",
-	surface: "#23202E",
-	text: "#2E2720",
-	textSecondary: "#7A6E61",
-	accent: "#5B21B6",
+const STEP_META: Record<
+	CreationStep,
+	{ section: string; title: string; description: string; nextLabel: string }
+> = {
+	name: {
+		section: "Ім'я",
+		title: "Назвіть персонажа",
+		description:
+			"Це ім'я супроводжуватиме вашого героя протягом усієї пригоди.",
+		nextLabel: "Далі: Раса",
+	},
+	origin: {
+		section: "Раса",
+		title: "Оберіть расу",
+		description:
+			"Раса визначає стартові риси, бонуси характеристик та вроджені здібності персонажа.",
+		nextLabel: "Далі: Передісторія",
+	},
+	background: {
+		section: "Передісторія",
+		title: "Оберіть передісторію",
+		description:
+			"Передісторія додає особливі риси та деталі минулого персонажа.",
+		nextLabel: "Далі: Клас",
+	},
+	class: {
+		section: "Клас",
+		title: "Оберіть клас",
+		description:
+			"Клас визначає бойовий стиль, здібності та шлях розвитку персонажа.",
+		nextLabel: "Далі: Характеристики",
+	},
+	stats: {
+		section: "Характеристики",
+		title: "Розподіліть характеристики",
+		description: "Розподіліть очки між силою, спритністю, інтелектом та волею.",
+		nextLabel: "Далі: Навички",
+	},
+	skills: {
+		section: "Навички",
+		title: "Розподіліть навички",
+		description:
+			"Базові значення навичок визначаються характеристиками. Розподіліть 4 вільні очки на власний розсуд.",
+		nextLabel: "Далі: Огляд",
+	},
+	summary: {
+		section: "Огляд",
+		title: "Огляд персонажа",
+		description: "Перевірте деталі персонажа перед тим, як розпочати пригоду.",
+		nextLabel: "Створити персонажа",
+	},
 };
+
+const MIN_NAME_LENGTH = 2;
+
+function isStepValid(step: CreationStep, draft: CharacterDraft): boolean {
+	switch (step) {
+		case "name":
+			return draft.name.trim().length >= MIN_NAME_LENGTH;
+		case "origin":
+			return draft.origin !== null;
+		case "background":
+			return draft.background !== null;
+		case "class":
+			return draft.characterClass !== null;
+		case "stats":
+			return draft.stats !== null;
+		case "skills":
+			return draft.skills !== null;
+		case "summary":
+			return true;
+	}
+}
 
 function StepContent({ step, draft, onUpdate }: StepContentProps) {
 	switch (step) {
@@ -65,9 +141,146 @@ function StepContent({ step, draft, onUpdate }: StepContentProps) {
 					onChange={(stats) => onUpdate({ stats })}
 				/>
 			);
+		case "skills":
+			return (
+				<StepSkills
+					stats={draft.stats ?? { STR: 0, DEX: 0, INT: 0, WIL: 0 }}
+					value={draft.skills}
+					onChange={(skills) => onUpdate({ skills })}
+				/>
+			);
 		case "summary":
 			return <StepSummary draft={draft} />;
 	}
+}
+
+function FooterConfirmation({
+	step,
+	draft,
+}: {
+	step: CreationStep;
+	draft: CharacterDraft;
+}) {
+	switch (step) {
+		case "name": {
+			return (
+				<ConfirmationRow
+					icon={
+						<PersonIcon size={16} color={COLORS.accent} strokeWidth={1.5} />
+					}
+					text={
+						<>
+							Ім'я персонажа:{" "}
+							<Text style={styles.confirmationBold}>{draft.name || "—"}</Text>
+						</>
+					}
+				/>
+			);
+		}
+		case "origin": {
+			const Icon = draft.origin ? originIcons[draft.origin.id] : undefined;
+			return (
+				<ConfirmationRow
+					icon={
+						Icon ? (
+							<Icon size={16} color={COLORS.accent} strokeWidth={1.5} />
+						) : (
+							<PersonIcon size={16} color={COLORS.accent} strokeWidth={1.5} />
+						)
+					}
+					text={
+						<>
+							Обрано:{" "}
+							<Text style={styles.confirmationBold}>
+								{draft.origin?.origin ?? "—"}
+							</Text>
+						</>
+					}
+				/>
+			);
+		}
+		case "background":
+			return (
+				<ConfirmationRow
+					icon={
+						<QuestBookIcon size={16} color={COLORS.accent} strokeWidth={1.5} />
+					}
+					text={
+						<>
+							Обрано:{" "}
+							<Text style={styles.confirmationBold}>
+								{draft.background?.title ?? "—"}
+							</Text>
+						</>
+					}
+				/>
+			);
+		case "class": {
+			const Icon = draft.characterClass
+				? classIcons[draft.characterClass.id]
+				: undefined;
+			return (
+				<ConfirmationRow
+					icon={
+						Icon ? (
+							<Icon size={16} color={COLORS.accent} strokeWidth={1.5} />
+						) : (
+							<PersonIcon size={16} color={COLORS.accent} strokeWidth={1.5} />
+						)
+					}
+					text={
+						<>
+							Обрано:{" "}
+							<Text style={styles.confirmationBold}>
+								{draft.characterClass?.background ?? "—"}
+							</Text>
+						</>
+					}
+				/>
+			);
+		}
+		case "stats":
+			return (
+				<ConfirmationRow
+					icon={
+						<PersonIcon size={16} color={COLORS.accent} strokeWidth={1.5} />
+					}
+					text={
+						<Text style={styles.confirmationBold}>
+							{draft.stats
+								? "Характеристики розподілено"
+								: "Характеристики ще не розподілено"}
+						</Text>
+					}
+				/>
+			);
+		case "skills":
+			return (
+				<ConfirmationRow
+					icon={
+						<PersonIcon size={16} color={COLORS.accent} strokeWidth={1.5} />
+					}
+					text={
+						<Text style={styles.confirmationBold}>
+							{draft.skills
+								? "Навички розподілено"
+								: "Навички ще не розподілено"}
+						</Text>
+					}
+				/>
+			);
+		case "summary":
+			return null;
+	}
+}
+
+function ConfirmationRow({ icon, text }: { icon: ReactNode; text: ReactNode }) {
+	return (
+		<View style={styles.confirmationRow}>
+			<View style={styles.confirmationIcon}>{icon}</View>
+			<Text style={styles.confirmationText}>{text}</Text>
+		</View>
+	);
 }
 
 export function CreateCharacterModal({
@@ -87,6 +300,9 @@ export function CreateCharacterModal({
 		updateDraft,
 	} = useCharacterDraft();
 
+	const meta = STEP_META[currentStep];
+	const canProceed = isStepValid(currentStep, draft);
+
 	const handleClose = () => {
 		reset();
 		onClose();
@@ -97,34 +313,50 @@ export function CreateCharacterModal({
 		handleClose();
 	};
 
+	const handleBack = () => {
+		if (isFirst) {
+			handleClose();
+		} else {
+			goBack();
+		}
+	};
+
 	return (
 		<Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
 			<View style={styles.container}>
-				<View style={styles.header}>
+				<View style={styles.topBar}>
 					<TouchableOpacity
-						style={styles.closeButton}
-						onPress={handleClose}
-						accessibilityLabel="Закрити"
+						style={styles.backButton}
+						onPress={handleBack}
+						accessibilityLabel="Назад"
+						hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
 					>
-						<Text style={styles.closeIcon}>✕</Text>
+						<ChevronLeftIcon
+							size={20}
+							color={COLORS.textMuted}
+							strokeWidth={1.8}
+						/>
 					</TouchableOpacity>
-					<Text style={styles.title}>Новий персонаж</Text>
-					<View style={styles.divider} />
-					<Text style={styles.subtitle}>
-						Крок {currentIndex + 1} з {STEPS.length}
-					</Text>
 				</View>
 
-				<View style={styles.steps}>
-					{STEPS.map((step) => (
-						<View
-							key={step}
-							style={[
-								styles.stepDot,
-								currentStep === step && styles.stepDotActive,
-							]}
-						/>
-					))}
+				<View style={styles.header}>
+					<View style={styles.progress}>
+						{STEPS.map((step, index) => (
+							<View
+								key={step}
+								style={[
+									styles.progressSegment,
+									index <= currentIndex && styles.progressSegmentActive,
+								]}
+							/>
+						))}
+					</View>
+
+					<Text style={styles.stepLabel}>
+						Крок {currentIndex + 1} з {STEPS.length} · {meta.section}
+					</Text>
+					<Text style={styles.title}>{meta.title}</Text>
+					<Text style={styles.description}>{meta.description}</Text>
 				</View>
 
 				<View style={styles.content}>
@@ -136,20 +368,29 @@ export function CreateCharacterModal({
 				</View>
 
 				<View style={styles.footer}>
-					{!isFirst ? (
-						<TouchableOpacity style={styles.buttonBack} onPress={goBack}>
-							<Text style={styles.buttonBackText}>← Назад</Text>
-						</TouchableOpacity>
-					) : (
-						<View />
-					)}
+					<FooterConfirmation step={currentStep} draft={draft} />
 					<TouchableOpacity
-						style={styles.buttonNext}
+						style={[
+							styles.buttonNext,
+							!canProceed && styles.buttonNextDisabled,
+						]}
 						onPress={isLast ? handleSubmit : goNext}
+						activeOpacity={0.85}
+						disabled={!canProceed}
 					>
-						<Text style={styles.buttonNextText}>
-							{isLast ? "Створити" : "Далі →"}
+						<Text
+							style={[
+								styles.buttonNextText,
+								!canProceed && styles.buttonNextTextDisabled,
+							]}
+						>
+							{meta.nextLabel}
 						</Text>
+						<ChevronRightIcon
+							size={16}
+							color={canProceed ? COLORS.onAccent : COLORS.textFaint}
+							strokeWidth={2.2}
+						/>
 					</TouchableOpacity>
 				</View>
 			</View>
@@ -160,109 +401,123 @@ export function CreateCharacterModal({
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: COLORS.background,
+		backgroundColor: COLORS.bg,
+	},
+
+	topBar: {
+		paddingTop: 56,
+		paddingHorizontal: 24,
+	},
+	backButton: {
+		width: 32,
+		height: 32,
+		alignItems: "flex-start",
+		justifyContent: "center",
 	},
 
 	header: {
-		paddingTop: 56,
-		paddingHorizontal: 28,
-		paddingBottom: 24,
+		paddingHorizontal: 24,
+		paddingTop: 14,
+		gap: 16,
+	},
+	progress: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 6,
+	},
+	progressSegment: {
+		flexGrow: 1,
+		height: 4,
+		borderRadius: 2,
+		backgroundColor: COLORS.borderSoft,
+	},
+	progressSegmentActive: {
+		backgroundColor: COLORS.accent,
+	},
+	stepLabel: {
+		fontFamily: FONTS.bodySemiBold,
+		fontSize: 12,
+		letterSpacing: 0.8,
+		textTransform: "uppercase",
+		color: COLORS.textFaint,
+		marginBottom: -10,
 	},
 	title: {
-		fontFamily: "Cinzel-SemiBold",
-		fontSize: 24,
-		color: COLORS.dark,
-		letterSpacing: 0.5,
-		marginBottom: 16,
+		fontFamily: FONTS.headingSemiBold,
+		fontSize: 26,
+		color: COLORS.text,
+		letterSpacing: 0.2,
 	},
-	divider: {
-		height: 1.5,
-		backgroundColor: COLORS.accent,
-		opacity: 0.7,
-		marginBottom: 14,
-	},
-	subtitle: {
-		fontFamily: "EBGaramond-Italic",
-		fontSize: 16,
-		fontStyle: "italic",
-		color: COLORS.textSecondary,
+	description: {
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 13,
+		color: COLORS.textMuted,
+		lineHeight: 19,
+		marginTop: -8,
 	},
 
 	content: {
 		flex: 1,
-		paddingHorizontal: 28,
-		paddingTop: 8,
+		paddingHorizontal: 24,
+		paddingTop: 20,
 	},
 
 	footer: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-		paddingHorizontal: 28,
-		paddingBottom: 36,
-		paddingTop: 16,
+		paddingHorizontal: 24,
+		paddingTop: 14,
+		paddingBottom: 30,
+		borderTopWidth: 1,
+		borderTopColor: COLORS.borderSoft,
+		backgroundColor: COLORS.bg,
+		gap: 12,
 	},
 
-	buttonBack: {
-		paddingVertical: 12,
-		paddingHorizontal: 20,
+	confirmationRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 10,
 	},
-	buttonBackText: {
-		fontFamily: "EBGaramond-Italic",
-		fontSize: 16,
-		fontStyle: "italic",
-		color: COLORS.textSecondary,
+	confirmationIcon: {
+		width: 30,
+		height: 30,
+		borderRadius: 15,
+		backgroundColor: COLORS.accentSoft18,
+		borderWidth: 1,
+		borderColor: COLORS.accent,
+		alignItems: "center",
+		justifyContent: "center",
+		flexShrink: 0,
+	},
+	confirmationText: {
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 13,
+		color: COLORS.textMuted,
+		flex: 1,
+	},
+	confirmationBold: {
+		fontFamily: FONTS.bodySemiBold,
+		color: COLORS.text,
 	},
 
 	buttonNext: {
-		backgroundColor: "#4D355F",
-		paddingVertical: 14,
-		paddingHorizontal: 32,
-		borderRadius: 999,
-		shadowColor: "#4D355F",
-		shadowOffset: { width: 0, height: 4 },
-		shadowOpacity: 0.18,
-		shadowRadius: 8,
-		elevation: 4,
-	},
-	buttonNextText: {
-		fontFamily: "Cinzel-SemiBold",
-		fontSize: 15,
-		color: COLORS.background,
-		letterSpacing: 0.5,
-	},
-
-	steps: {
-		flexDirection: "row",
-		justifyContent: "center",
-		gap: 6,
-		paddingBottom: 16,
-	},
-	stepDot: {
-		width: 6,
-		height: 6,
-		borderRadius: 3,
-		backgroundColor: COLORS.textSecondary,
-		opacity: 0.3,
-	},
-	stepDotActive: {
+		height: 52,
+		borderRadius: RADII.xl,
 		backgroundColor: COLORS.accent,
-		opacity: 1,
-		width: 18,
-	},
-
-	closeButton: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		backgroundColor: "#4D355F",
+		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
-		alignSelf: "flex-end",
-		marginBottom: 16,
+		gap: 8,
 	},
-	closeIcon: {
-		color: "#F2EBDE",
-		fontSize: 16,
+	buttonNextText: {
+		fontFamily: FONTS.headingSemiBold,
+		fontSize: 15,
+		color: COLORS.onAccent,
+		letterSpacing: 0.4,
+	},
+	buttonNextDisabled: {
+		backgroundColor: COLORS.bgElev2,
+	},
+	buttonNextTextDisabled: {
+		color: COLORS.textFaint,
 	},
 });

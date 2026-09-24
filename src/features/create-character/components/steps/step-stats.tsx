@@ -1,10 +1,18 @@
 import { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+	ScrollView,
+	StyleSheet,
+	Text,
+	TouchableOpacity,
+	View,
+} from "react-native";
 import type { Stat } from "@/entities/character-classes/types";
+import { COLORS, FONTS, RADII } from "@/shared/theme";
+import { ChevronLeftIcon, CloseIcon } from "@/shared/ui/icons";
 
 interface Props {
 	value: Record<Stat, number> | null;
-	onChange: (stats: Record<Stat, number>) => void;
+	onChange: (stats: Record<Stat, number> | null) => void;
 }
 
 const STATS: Stat[] = ["STR", "DEX", "INT", "WIL"];
@@ -28,6 +36,7 @@ export const StepStats = ({ onChange }: Props) => {
 		setAssigned({});
 		setIsPresetOpen(false);
 		setOpenDropdown(null);
+		onChange(null);
 	};
 
 	const handleAssign = (stat: Stat, index: number) => {
@@ -49,8 +58,16 @@ export const StepStats = ({ onChange }: Props) => {
 		}
 	};
 
+	const handleClear = (stat: Stat) => {
+		const newAssigned = { ...assigned };
+		delete newAssigned[stat];
+		setAssigned(newAssigned);
+		setOpenDropdown(null);
+		onChange(null);
+	};
+
 	return (
-		<View>
+		<ScrollView showsVerticalScrollIndicator={false}>
 			<Text style={styles.label}>Обери розподіл</Text>
 
 			<TouchableOpacity
@@ -73,7 +90,12 @@ export const StepStats = ({ onChange }: Props) => {
 						? `${PRESETS.find((p) => p.values === selectedPreset)?.label}:  ${selectedPreset.map(formatValue).join(",  ")}`
 						: "Обери розподіл..."}
 				</Text>
-				<Text style={styles.arrow}>{isPresetOpen ? "▲" : "▼"}</Text>
+				<ChevronLeftIcon
+					size={11}
+					color={COLORS.textFaint}
+					strokeWidth={2.4}
+					style={isPresetOpen ? styles.arrowUp : styles.arrowDown}
+				/>
 			</TouchableOpacity>
 
 			{isPresetOpen && (
@@ -143,14 +165,31 @@ export const StepStats = ({ onChange }: Props) => {
 											? formatValue(selectedPreset[assigned[stat]!])
 											: "обери..."}
 									</Text>
-									<Text style={styles.arrow}>
-										{openDropdown === stat ? "▲" : "▼"}
-									</Text>
+									<ChevronLeftIcon
+										size={11}
+										color={COLORS.textFaint}
+										strokeWidth={2.4}
+										style={
+											openDropdown === stat ? styles.arrowUp : styles.arrowDown
+										}
+									/>
 								</TouchableOpacity>
 							</View>
 
 							{openDropdown === stat && (
 								<View style={[styles.dropdown, styles.statDropdown]}>
+									<TouchableOpacity
+										style={styles.clearOption}
+										onPress={() => handleClear(stat)}
+										activeOpacity={0.7}
+									>
+										<CloseIcon
+											size={11}
+											color={COLORS.textFaint}
+											strokeWidth={2}
+										/>
+										<Text style={styles.clearOptionText}>Очистити</Text>
+									</TouchableOpacity>
 									{selectedPreset
 										.map((val, index) => ({ val, index }))
 										.filter(({ index }) => {
@@ -186,14 +225,15 @@ export const StepStats = ({ onChange }: Props) => {
 					))}
 				</View>
 			)}
-		</View>
+		</ScrollView>
 	);
 };
 
 const styles = StyleSheet.create({
 	label: {
+		fontFamily: FONTS.bodySemiBold,
 		fontSize: 11,
-		color: "#7A6E61",
+		color: COLORS.textFaint,
 		letterSpacing: 1.2,
 		textTransform: "uppercase",
 		marginBottom: 12,
@@ -210,9 +250,9 @@ const styles = StyleSheet.create({
 		paddingVertical: 4,
 	},
 	statName: {
+		fontFamily: FONTS.headingSemiBold,
 		fontSize: 15,
-		color: "#2E2720",
-		fontWeight: "500",
+		color: COLORS.text,
 		letterSpacing: 1,
 		width: 40,
 	},
@@ -221,9 +261,10 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
-		borderWidth: 1.5,
-		borderColor: "rgba(46,39,32,0.3)",
-		borderRadius: 10,
+		borderWidth: 1,
+		borderColor: COLORS.borderSoft,
+		backgroundColor: COLORS.bgElev,
+		borderRadius: RADII.md,
 		paddingVertical: 10,
 		paddingHorizontal: 14,
 	},
@@ -231,33 +272,32 @@ const styles = StyleSheet.create({
 		width: 140,
 	},
 	triggerOpen: {
-		borderColor: "#2E2720",
+		borderColor: COLORS.text,
 	},
 	triggerAssigned: {
-		borderColor: "#5B21B6",
-		backgroundColor: "rgba(91,33,182,0.06)",
+		borderColor: COLORS.accent,
+		backgroundColor: COLORS.accentSoft10,
 	},
 	triggerText: {
+		fontFamily: FONTS.bodyRegular,
 		fontSize: 15,
-		color: "#2E2720",
+		color: COLORS.text,
 	},
 	triggerPlaceholder: {
-		color: "#7A6E61",
-		fontStyle: "italic",
+		color: COLORS.textFaint,
 	},
 	triggerAssignedText: {
-		color: "#5B21B6",
-		fontWeight: "500",
+		fontFamily: FONTS.bodyMedium,
+		color: COLORS.accent,
 	},
-	arrow: {
-		fontSize: 10,
-		color: "#7A6E61",
-	},
+	arrowDown: { transform: [{ rotate: "-90deg" }] },
+	arrowUp: { transform: [{ rotate: "90deg" }] },
 
 	dropdown: {
-		borderWidth: 1.5,
-		borderColor: "#2E2720",
-		borderRadius: 10,
+		borderWidth: 1,
+		borderColor: COLORS.text,
+		backgroundColor: COLORS.bgElev,
+		borderRadius: RADII.md,
 		marginTop: 4,
 		marginBottom: 8,
 		overflow: "hidden",
@@ -272,25 +312,41 @@ const styles = StyleSheet.create({
 		paddingVertical: 10,
 		paddingHorizontal: 14,
 		borderBottomWidth: 0.5,
-		borderBottomColor: "rgba(46,39,32,0.15)",
+		borderBottomColor: COLORS.borderSoft,
 	},
 	optionSelected: {
-		backgroundColor: "rgba(91,33,182,0.06)",
+		backgroundColor: COLORS.accentSoft10,
 	},
 	optionText: {
+		fontFamily: FONTS.bodyRegular,
 		fontSize: 15,
-		color: "#2E2720",
+		color: COLORS.text,
 	},
 	optionTextSelected: {
-		color: "#5B21B6",
-		fontWeight: "500",
+		fontFamily: FONTS.bodyMedium,
+		color: COLORS.accent,
 	},
 	presetValues: {
+		fontFamily: FONTS.bodyRegular,
 		fontSize: 13,
-		color: "#7A6E61",
-		fontStyle: "italic",
+		color: COLORS.textMuted,
 	},
 	presetValuesSelected: {
-		color: "#5B21B6",
+		color: COLORS.accent,
+	},
+
+	clearOption: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+		paddingVertical: 10,
+		paddingHorizontal: 14,
+		borderBottomWidth: 0.5,
+		borderBottomColor: COLORS.borderSoft,
+	},
+	clearOptionText: {
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 15,
+		color: COLORS.textFaint,
 	},
 });

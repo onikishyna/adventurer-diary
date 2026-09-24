@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import {
 	ScrollView,
 	StyleSheet,
@@ -6,7 +5,9 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
-import { type Origin, origins } from "@/entities/ancestry";
+import { type Origin, originIcons, origins } from "@/entities/ancestry";
+import { COLORS, FONTS, RADII } from "@/shared/theme";
+import { CheckIcon } from "@/shared/ui/icons";
 
 interface StepOriginProps {
 	value: Origin | null;
@@ -14,52 +15,48 @@ interface StepOriginProps {
 }
 
 export const StepOrigin = ({ value, onChange }: StepOriginProps) => {
-	const [isOpen, setIsOpen] = useState(false);
-
-	const handleSelect = (origin: Origin) => {
-		onChange(origin);
-		setIsOpen(false);
-	};
-
 	return (
 		<ScrollView showsVerticalScrollIndicator={false}>
-			<Text style={styles.label}>Походження</Text>
+			<Text style={styles.label}>Раса</Text>
 
-			<TouchableOpacity
-				style={styles.trigger}
-				onPress={() => setIsOpen((prev) => !prev)}
-				activeOpacity={0.7}
-			>
-				<Text style={value ? styles.triggerText : styles.triggerPlaceholder}>
-					{value ? value.origin : "Обери походження..."}
-				</Text>
-				<Text style={styles.arrow}>{isOpen ? "▲" : "▼"}</Text>
-			</TouchableOpacity>
-
-			{isOpen && (
-				<View style={styles.dropdown}>
-					{origins.map((origin) => (
+			<View style={styles.grid}>
+				{origins.map((origin) => {
+					const Icon = originIcons[origin.id];
+					const selected = value?.id === origin.id;
+					return (
 						<TouchableOpacity
 							key={origin.id}
-							style={[
-								styles.option,
-								value?.id === origin.id && styles.optionSelected,
-							]}
-							onPress={() => handleSelect(origin)}
+							style={[styles.card, selected && styles.cardSelected]}
+							onPress={() => onChange(origin)}
 							activeOpacity={0.7}
 						>
-							<Text
-								style={[
-									styles.optionText,
-									value?.id === origin.id && styles.optionTextSelected,
-								]}
-							>
-								{origin.origin}
-							</Text>
+							{selected && (
+								<View style={styles.badge}>
+									<CheckIcon size={11} color={COLORS.onAccent} />
+								</View>
+							)}
+							<View style={[styles.icon, selected && styles.iconSelected]}>
+								{Icon && (
+									<Icon
+										size={21}
+										color={selected ? COLORS.accent : COLORS.textMuted}
+									/>
+								)}
+							</View>
+							<View style={styles.cardText}>
+								<Text
+									style={[styles.cardName, selected && styles.cardNameSelected]}
+								>
+									{origin.origin}
+								</Text>
+								<Text style={styles.cardAbility} numberOfLines={2}>
+									{origin.ability[0]}
+								</Text>
+							</View>
 						</TouchableOpacity>
-					))}
-				</View>
-			)}
+					);
+				})}
+			</View>
 
 			{value && (
 				<View style={styles.infoCard}>
@@ -71,7 +68,7 @@ export const StepOrigin = ({ value, onChange }: StepOriginProps) => {
 						<Text style={styles.infoLabel}>Здібності</Text>
 						{value.ability.map((item, index) => (
 							<Text
-								key={index}
+								key={item}
 								style={index === 0 ? styles.abilityFirst : styles.abilityItem}
 							>
 								{index === 0 ? item : `· ${item}`}
@@ -87,105 +84,124 @@ export const StepOrigin = ({ value, onChange }: StepOriginProps) => {
 
 const styles = StyleSheet.create({
 	label: {
+		fontFamily: FONTS.bodySemiBold,
 		fontSize: 11,
-		color: "#7A6E61",
+		color: COLORS.textFaint,
 		letterSpacing: 1.2,
 		textTransform: "uppercase",
-		marginBottom: 8,
+		marginBottom: 12,
 	},
 
-	trigger: {
+	grid: {
 		flexDirection: "row",
-		justifyContent: "space-between",
+		flexWrap: "wrap",
+		gap: 12,
+	},
+	card: {
+		width: "47%",
+		borderWidth: 1,
+		borderColor: COLORS.borderSoft,
+		borderRadius: RADII.xl,
+		padding: 12,
+		gap: 10,
+		backgroundColor: COLORS.bgElev,
+		position: "relative",
+	},
+	cardSelected: {
+		borderColor: COLORS.accent,
+		backgroundColor: COLORS.accentSoft10,
+	},
+	badge: {
+		position: "absolute",
+		top: 10,
+		right: 10,
+		width: 18,
+		height: 18,
+		borderRadius: 9,
+		backgroundColor: COLORS.accent,
 		alignItems: "center",
-		borderWidth: 1.5,
-		borderColor: "#2E2720",
-		borderRadius: 12,
-		padding: 14,
-		marginBottom: 4,
+		justifyContent: "center",
 	},
-	triggerText: {
-		fontSize: 16,
-		color: "#2E2720",
+	icon: {
+		width: 40,
+		height: 40,
+		borderRadius: 20,
+		backgroundColor: COLORS.bgElev2,
+		borderWidth: 1,
+		borderColor: COLORS.borderSoft,
+		alignItems: "center",
+		justifyContent: "center",
 	},
-	triggerPlaceholder: {
-		fontSize: 16,
-		color: "#7A6E61",
-		fontStyle: "italic",
+	iconSelected: {
+		backgroundColor: COLORS.accentSoft18,
+		borderColor: COLORS.accent,
 	},
-	arrow: {
-		fontSize: 10,
-		color: "#7A6E61",
+	cardText: {
+		gap: 3,
 	},
-
-	dropdown: {
-		borderWidth: 1.5,
-		borderColor: "#2E2720",
-		borderRadius: 12,
-		marginBottom: 16,
-		overflow: "hidden",
+	cardName: {
+		fontFamily: FONTS.headingSemiBold,
+		fontSize: 14,
+		color: COLORS.text,
 	},
-	option: {
-		padding: 14,
-		borderBottomWidth: 0.5,
-		borderBottomColor: "rgba(46,39,32,0.15)",
+	cardNameSelected: {
+		color: COLORS.accent,
 	},
-	optionSelected: {
-		backgroundColor: "rgba(91,33,182,0.06)",
-	},
-	optionText: {
-		fontSize: 16,
-		color: "#2E2720",
-	},
-	optionTextSelected: {
-		color: "#5B21B6",
+	cardAbility: {
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 11,
+		color: COLORS.textMuted,
+		lineHeight: 15,
 	},
 
 	infoCard: {
-		borderWidth: 1.5,
-		borderColor: "#5B21B6",
-		borderRadius: 12,
+		borderWidth: 1,
+		borderColor: COLORS.accent,
+		borderRadius: RADII.lg,
 		padding: 16,
-		backgroundColor: "rgba(91,33,182,0.04)",
-		marginTop: 8,
+		backgroundColor: COLORS.accentSoft10,
+		marginTop: 14,
+		marginBottom: 8,
 	},
 	infoRow: {
 		flexDirection: "row",
 		justifyContent: "space-between",
 		paddingVertical: 6,
 		borderBottomWidth: 0.5,
-		borderBottomColor: "rgba(46,39,32,0.12)",
+		borderBottomColor: COLORS.borderSoft,
 	},
 	infoLabel: {
+		fontFamily: FONTS.bodyRegular,
 		fontSize: 13,
-		color: "#7A6E61",
+		color: COLORS.textMuted,
 	},
 	infoValue: {
+		fontFamily: FONTS.bodyRegular,
 		fontSize: 13,
-		color: "#2E2720",
+		color: COLORS.text,
 	},
 	infoDescription: {
-		fontSize: 14,
-		color: "#7A6E61",
-		fontStyle: "italic",
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 13,
+		color: COLORS.textMuted,
 		marginTop: 12,
-		lineHeight: 20,
+		lineHeight: 19,
 	},
 	abilityBlock: {
 		paddingVertical: 6,
 		borderBottomWidth: 0.5,
-		borderBottomColor: "rgba(46,39,32,0.12)",
+		borderBottomColor: COLORS.borderSoft,
 		gap: 2,
 	},
 	abilityFirst: {
+		fontFamily: FONTS.bodyMedium,
 		fontSize: 13,
-		color: "#2E2720",
-		fontWeight: "500",
+		color: COLORS.text,
 		marginTop: 4,
 	},
 	abilityItem: {
-		fontSize: 13,
-		color: "#7A6E61",
-		fontStyle: "italic",
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 12,
+		color: COLORS.textMuted,
 	},
 });

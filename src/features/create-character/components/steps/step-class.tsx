@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
 	ScrollView,
 	StyleSheet,
@@ -6,7 +5,13 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
-import { type CharacterClass, heroes } from "@/entities/character-classes";
+import {
+	type CharacterClass,
+	classIcons,
+	heroes,
+} from "@/entities/character-classes";
+import { COLORS, FONTS, RADII } from "@/shared/theme";
+import { CheckIcon } from "@/shared/ui/icons";
 
 interface StepClassProps {
 	value: CharacterClass | null;
@@ -14,52 +19,48 @@ interface StepClassProps {
 }
 
 export const StepClass = ({ value, onChange }: StepClassProps) => {
-	const [isOpen, setIsOpen] = useState(false);
-
-	const handleSelect = (hero: CharacterClass) => {
-		onChange(hero);
-		setIsOpen(false);
-	};
-
 	return (
 		<ScrollView showsVerticalScrollIndicator={false}>
 			<Text style={styles.label}>Клас</Text>
 
-			<TouchableOpacity
-				style={styles.trigger}
-				onPress={() => setIsOpen((prev) => !prev)}
-				activeOpacity={0.7}
-			>
-				<Text style={value ? styles.triggerText : styles.triggerPlaceholder}>
-					{value ? value.background : "Обери клас..."}
-				</Text>
-				<Text style={styles.arrow}>{isOpen ? "▲" : "▼"}</Text>
-			</TouchableOpacity>
-
-			{isOpen && (
-				<View style={styles.dropdown}>
-					{heroes.map((hero) => (
+			<View style={styles.list}>
+				{heroes.map((hero) => {
+					const Icon = classIcons[hero.id];
+					const selected = value?.id === hero.id;
+					return (
 						<TouchableOpacity
 							key={hero.id}
-							style={[
-								styles.option,
-								value?.id === hero.id && styles.optionSelected,
-							]}
-							onPress={() => handleSelect(hero)}
+							style={[styles.card, selected && styles.cardSelected]}
+							onPress={() => onChange(hero)}
 							activeOpacity={0.7}
 						>
-							<Text
-								style={[
-									styles.optionText,
-									value?.id === hero.id && styles.optionTextSelected,
-								]}
-							>
-								{hero.background}
-							</Text>
+							<View style={[styles.icon, selected && styles.iconSelected]}>
+								{Icon && (
+									<Icon
+										size={21}
+										color={selected ? COLORS.accent : COLORS.textMuted}
+									/>
+								)}
+							</View>
+							<View style={styles.cardText}>
+								<Text
+									style={[styles.cardName, selected && styles.cardNameSelected]}
+								>
+									{hero.background}
+								</Text>
+								<Text style={styles.cardSubtitle} numberOfLines={2}>
+									{hero.keyStats.join(" / ")}
+								</Text>
+							</View>
+							{selected && (
+								<View style={styles.badge}>
+									<CheckIcon size={11} color={COLORS.onAccent} />
+								</View>
+							)}
 						</TouchableOpacity>
-					))}
-				</View>
-			)}
+					);
+				})}
+			</View>
 
 			{value && (
 				<View style={styles.infoCard}>
@@ -109,68 +110,82 @@ export const StepClass = ({ value, onChange }: StepClassProps) => {
 
 const styles = StyleSheet.create({
 	label: {
+		fontFamily: FONTS.bodySemiBold,
 		fontSize: 11,
-		color: "#7A6E61",
+		color: COLORS.textFaint,
 		letterSpacing: 1.2,
 		textTransform: "uppercase",
-		marginBottom: 8,
+		marginBottom: 12,
 	},
 
-	trigger: {
+	list: {
+		gap: 10,
+	},
+	card: {
 		flexDirection: "row",
-		justifyContent: "space-between",
 		alignItems: "center",
-		borderWidth: 1.5,
-		borderColor: "#2E2720",
-		borderRadius: 12,
-		padding: 14,
-		marginBottom: 4,
+		gap: 12,
+		borderWidth: 1,
+		borderColor: COLORS.borderSoft,
+		borderRadius: RADII.xl,
+		padding: 12,
+		backgroundColor: COLORS.bgElev,
 	},
-	triggerText: {
-		fontSize: 16,
-		color: "#2E2720",
+	cardSelected: {
+		borderColor: COLORS.accent,
+		backgroundColor: COLORS.accentSoft10,
 	},
-	triggerPlaceholder: {
-		fontSize: 16,
-		color: "#7A6E61",
-		fontStyle: "italic",
+	icon: {
+		width: 42,
+		height: 42,
+		borderRadius: 10,
+		backgroundColor: COLORS.bgElev2,
+		borderWidth: 1,
+		borderColor: COLORS.borderSoft,
+		alignItems: "center",
+		justifyContent: "center",
+		flexShrink: 0,
 	},
-	arrow: {
-		fontSize: 10,
-		color: "#7A6E61",
+	iconSelected: {
+		backgroundColor: COLORS.accentSoft18,
+		borderColor: COLORS.accent,
 	},
-
-	dropdown: {
-		borderWidth: 1.5,
-		borderColor: "#2E2720",
-		borderRadius: 12,
-		marginBottom: 16,
-		overflow: "hidden",
+	cardText: {
+		flex: 1,
+		gap: 2,
 	},
-	option: {
-		padding: 14,
-		borderBottomWidth: 0.5,
-		borderBottomColor: "rgba(46,39,32,0.15)",
+	cardName: {
+		fontFamily: FONTS.headingSemiBold,
+		fontSize: 14,
+		color: COLORS.text,
 	},
-	optionSelected: {
-		backgroundColor: "rgba(91,33,182,0.06)",
+	cardNameSelected: {
+		color: COLORS.accent,
 	},
-	optionText: {
-		fontSize: 16,
-		color: "#2E2720",
+	cardSubtitle: {
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 11,
+		color: COLORS.textMuted,
+		lineHeight: 15,
 	},
-	optionTextSelected: {
-		color: "#5B21B6",
+	badge: {
+		width: 18,
+		height: 18,
+		borderRadius: 9,
+		backgroundColor: COLORS.accent,
+		alignItems: "center",
+		justifyContent: "center",
+		flexShrink: 0,
 	},
 
 	infoCard: {
-		borderWidth: 1.5,
-		borderColor: "#5B21B6",
-		borderRadius: 12,
+		borderWidth: 1,
+		borderColor: COLORS.accent,
+		borderRadius: RADII.lg,
 		padding: 16,
-		backgroundColor: "rgba(91,33,182,0.04)",
-		marginTop: 8,
-		gap: 0,
+		backgroundColor: COLORS.accentSoft10,
+		marginTop: 14,
+		marginBottom: 8,
 	},
 	infoRow: {
 		flexDirection: "row",
@@ -178,15 +193,17 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		paddingVertical: 6,
 		borderBottomWidth: 0.5,
-		borderBottomColor: "rgba(46,39,32,0.12)",
+		borderBottomColor: COLORS.borderSoft,
 	},
 	infoLabel: {
+		fontFamily: FONTS.bodyRegular,
 		fontSize: 13,
-		color: "#7A6E61",
+		color: COLORS.textMuted,
 	},
 	infoValue: {
+		fontFamily: FONTS.bodyRegular,
 		fontSize: 13,
-		color: "#2E2720",
+		color: COLORS.text,
 		textAlign: "right",
 		flexShrink: 1,
 		marginLeft: 16,
@@ -195,18 +212,12 @@ const styles = StyleSheet.create({
 	listBlock: {
 		paddingVertical: 6,
 		borderBottomWidth: 0.5,
-		borderBottomColor: "rgba(46,39,32,0.12)",
+		borderBottomColor: COLORS.borderSoft,
 		gap: 2,
 	},
-	listFirst: {
-		fontSize: 13,
-		color: "#2E2720",
-		fontWeight: "500",
-		marginTop: 4,
-	},
 	listItem: {
+		fontFamily: FONTS.bodyRegular,
 		fontSize: 13,
-		color: "#7A6E61",
-		fontStyle: "italic",
+		color: COLORS.textMuted,
 	},
 });

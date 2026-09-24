@@ -11,5 +11,7 @@ export default function CharacterScreen() {
 
 	if (!character) return null;
 
-	return <CharacterSheet character={character} onClose={() => router.back()} />;
+	return (
+		<CharacterSheet character={character} onClose={() => router.replace("/")} />
+	);
 }

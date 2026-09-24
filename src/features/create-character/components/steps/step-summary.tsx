@@ -1,5 +1,6 @@
 import type React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { COLORS, FONTS } from "@/shared/theme";
 import type { CharacterDraft } from "../../types";
 
 interface Props {
@@ -102,14 +103,14 @@ function AbilityRow({ label, values }: { label: string; values?: string[] }) {
 
 const styles = StyleSheet.create({
 	characterName: {
+		fontFamily: FONTS.headingSemiBold,
 		fontSize: 26,
-		color: "#12131A",
-		fontStyle: "italic",
+		color: COLORS.text,
 		marginBottom: 16,
 	},
 	divider: {
-		height: 1.5,
-		backgroundColor: "#5B21B6",
+		height: 1,
+		backgroundColor: COLORS.accent,
 		opacity: 0.7,
 		marginBottom: 24,
 	},
@@ -118,8 +119,9 @@ const styles = StyleSheet.create({
 		marginBottom: 24,
 	},
 	sectionTitle: {
+		fontFamily: FONTS.bodySemiBold,
 		fontSize: 11,
-		color: "#7A6E61",
+		color: COLORS.textFaint,
 		letterSpacing: 1.2,
 		textTransform: "uppercase",
 		marginBottom: 10,
@@ -130,46 +132,49 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		paddingVertical: 6,
 		borderBottomWidth: 0.5,
-		borderBottomColor: "rgba(46,39,32,0.12)",
+		borderBottomColor: COLORS.borderSoft,
 	},
 	rowLabel: {
+		fontFamily: FONTS.bodyRegular,
 		fontSize: 14,
-		color: "#7A6E61",
+		color: COLORS.textMuted,
 	},
 	rowValue: {
+		fontFamily: FONTS.bodyRegular,
 		fontSize: 14,
-		color: "#2E2720",
+		color: COLORS.text,
 		flexShrink: 1,
 		textAlign: "right",
 		marginLeft: 16,
 	},
 
 	description: {
+		fontFamily: FONTS.bodyRegular,
 		fontSize: 14,
-		color: "#7A6E61",
-		fontStyle: "italic",
+		color: COLORS.textMuted,
 		marginTop: 8,
 		lineHeight: 20,
 	},
 	gearItem: {
+		fontFamily: FONTS.bodyRegular,
 		fontSize: 14,
-		color: "#2E2720",
+		color: COLORS.text,
 		paddingVertical: 4,
 	},
 	abilityList: {
 		alignItems: "flex-end",
 	},
 	abilityFirst: {
+		fontFamily: FONTS.bodyMedium,
 		fontSize: 14,
-		color: "#2E2720",
-		fontWeight: "500",
+		color: COLORS.text,
 		textAlign: "right",
 		marginBottom: 2,
 	},
 	abilityItem: {
+		fontFamily: FONTS.bodyRegular,
 		fontSize: 13,
-		color: "#7A6E61",
-		fontStyle: "italic",
+		color: COLORS.textMuted,
 		textAlign: "right",
 	},
 });

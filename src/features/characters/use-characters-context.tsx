@@ -12,6 +12,10 @@ interface CharacterContextType {
 	characters: Character[];
 	addCharacter: (character: Character) => void;
 	deleteCharacter: (id: string) => void;
+	updateCharacter: (
+		id: string,
+		patch: Partial<Character> | ((character: Character) => Partial<Character>),
+	) => void;
 }
 
 const CharacterContext = createContext<CharacterContextType | null>(null);
@@ -37,10 +41,25 @@ export const CharacterProvider = ({ children }: { children: ReactNode }) => {
 	const deleteCharacter = (id: string) => {
 		setCharacters((prev) => prev.filter((character) => character.id !== id));
 	};
+	const updateCharacter = (
+		id: string,
+		patch: Partial<Character> | ((character: Character) => Partial<Character>),
+	) => {
+		setCharacters((prev) =>
+			prev.map((character) =>
+				character.id === id
+					? {
+							...character,
+							...(typeof patch === "function" ? patch(character) : patch),
+						}
+					: character,
+			),
+		);
+	};
 
 	return (
 		<CharacterContext.Provider
-			value={{ characters, addCharacter, deleteCharacter }}
+			value={{ characters, addCharacter, deleteCharacter, updateCharacter }}
 		>
 			{children}
 		</CharacterContext.Provider>

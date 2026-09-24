@@ -1,6 +1,7 @@
 import type { Origin } from "@/entities/ancestry";
 import type { Background } from "@/entities/background";
 import type { CharacterClass, Stat } from "@/entities/character-classes";
+import type { Skill } from "@/entities/skill";
 
 export type CreationStep =
 	| "name"
@@ -8,6 +9,7 @@ export type CreationStep =
 	| "background"
 	| "class"
 	| "stats"
+	| "skills"
 	| "summary";
 
 export interface CharacterDraft {
@@ -17,6 +19,7 @@ export interface CharacterDraft {
 	characterClass: CharacterClass | null;
 	level: number;
 	stats: Record<Stat, number> | null;
+	skills: Record<Skill, number> | null;
 }
 
 export const INITIAL_DRAFT: CharacterDraft = {
@@ -26,4 +29,5 @@ export const INITIAL_DRAFT: CharacterDraft = {
 	characterClass: null,
 	level: 1,
 	stats: null,
+	skills: null,
 };

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
 	ScrollView,
 	StyleSheet,
@@ -7,6 +7,8 @@ import {
 	View,
 } from "react-native";
 import { type Background, backgrounds } from "@/entities/background";
+import { COLORS, FONTS, RADII } from "@/shared/theme";
+import { ChevronLeftIcon } from "@/shared/ui/icons";
 
 interface StepBackgroundProps {
 	value: Background | null;
@@ -26,14 +28,23 @@ export const StepBackground = ({ value, onChange }: StepBackgroundProps) => {
 			<Text style={styles.label}>Передісторія</Text>
 
 			<TouchableOpacity
-				style={styles.trigger}
+				style={[
+					styles.trigger,
+					isOpen && styles.triggerOpen,
+					value && styles.triggerAssigned,
+				]}
 				onPress={() => setIsOpen((prev) => !prev)}
 				activeOpacity={0.7}
 			>
 				<Text style={value ? styles.triggerText : styles.triggerPlaceholder}>
 					{value ? value.title : "Обери передісторію..."}
 				</Text>
-				<Text style={styles.arrow}>{isOpen ? "▲" : "▼"}</Text>
+				<ChevronLeftIcon
+					size={11}
+					color={COLORS.textFaint}
+					strokeWidth={2.4}
+					style={isOpen ? styles.arrowUp : styles.arrowDown}
+				/>
 			</TouchableOpacity>
 
 			{isOpen && (
@@ -72,8 +83,9 @@ export const StepBackground = ({ value, onChange }: StepBackgroundProps) => {
 
 const styles = StyleSheet.create({
 	label: {
+		fontFamily: FONTS.bodySemiBold,
 		fontSize: 11,
-		color: "#7A6E61",
+		color: COLORS.textFaint,
 		letterSpacing: 1.2,
 		textTransform: "uppercase",
 		marginBottom: 8,
@@ -83,67 +95,70 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		borderWidth: 1.5,
-		borderColor: "#2E2720",
-		borderRadius: 12,
+		borderWidth: 1,
+		borderColor: COLORS.borderSoft,
+		borderRadius: RADII.lg,
+		backgroundColor: COLORS.bgElev,
 		padding: 14,
 		marginBottom: 4,
 	},
+	triggerOpen: {
+		borderColor: COLORS.text,
+	},
+	triggerAssigned: {
+		borderColor: COLORS.accent,
+		backgroundColor: COLORS.accentSoft10,
+	},
 	triggerText: {
-		fontSize: 16,
-		color: "#2E2720",
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 15,
+		color: COLORS.text,
 	},
 	triggerPlaceholder: {
-		fontSize: 16,
-		color: "#7A6E61",
-		fontStyle: "italic",
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 15,
+		color: COLORS.textFaint,
 	},
-	arrow: {
-		fontSize: 10,
-		color: "#7A6E61",
-	},
+	arrowDown: { transform: [{ rotate: "-90deg" }] },
+	arrowUp: { transform: [{ rotate: "90deg" }] },
 
 	dropdown: {
-		borderWidth: 1.5,
-		borderColor: "#2E2720",
-		borderRadius: 12,
+		borderWidth: 1,
+		borderColor: COLORS.borderSoft,
+		borderRadius: RADII.lg,
 		marginBottom: 16,
 		overflow: "hidden",
+		backgroundColor: COLORS.bgElev,
 	},
 	option: {
 		padding: 14,
 		borderBottomWidth: 0.5,
-		borderBottomColor: "rgba(46,39,32,0.15)",
+		borderBottomColor: COLORS.borderSoft,
 	},
 	optionSelected: {
-		backgroundColor: "rgba(91,33,182,0.06)",
+		backgroundColor: COLORS.accentSoft10,
 	},
 	optionText: {
-		fontSize: 16,
-		color: "#2E2720",
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 15,
+		color: COLORS.text,
 	},
 	optionTextSelected: {
-		color: "#5B21B6",
+		color: COLORS.accent,
 	},
 
 	infoCard: {
-		borderWidth: 1.5,
-		borderColor: "#5B21B6",
-		borderRadius: 12,
+		borderWidth: 1,
+		borderColor: COLORS.accent,
+		borderRadius: RADII.lg,
 		padding: 16,
-		backgroundColor: "rgba(91,33,182,0.04)",
+		backgroundColor: COLORS.accentSoft10,
 		marginTop: 8,
-		gap: 8,
-	},
-	infoTitle: {
-		fontSize: 15,
-		color: "#2E2720",
-		fontWeight: "500",
 	},
 	infoDescription: {
-		fontSize: 14,
-		color: "#7A6E61",
-		fontStyle: "italic",
-		lineHeight: 20,
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 13,
+		color: COLORS.textMuted,
+		lineHeight: 19,
 	},
 });

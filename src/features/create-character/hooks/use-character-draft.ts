@@ -11,6 +11,7 @@ export const STEPS: CreationStep[] = [
 	"background",
 	"class",
 	"stats",
+	"skills",
 	"summary",
 ];
 
