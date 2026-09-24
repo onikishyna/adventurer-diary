@@ -1,7 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-	SafeAreaView,
 	ScrollView,
 	StatusBar,
 	StyleSheet,
@@ -9,6 +8,7 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { originIcons } from "@/entities/ancestry";
 import type { Character } from "@/entities/character/types";
 import { DEFAULT_SKILLS } from "@/entities/skill";
@@ -17,10 +17,8 @@ import { CreateCharacterModal } from "@/features/create-character/components/cre
 import type { CharacterDraft } from "@/features/create-character/types";
 import { SpellsBrowser } from "@/features/spells/components/spells-browser";
 import { COLORS, FONTS, RADII } from "@/shared/theme";
-import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import {
 	ChevronRightIcon,
-	CloseIcon,
 	MapIcon,
 	PersonIcon,
 	PlusIcon,
@@ -33,16 +31,8 @@ type HomeTab = "characters" | "spells";
 export default function HomeScreen() {
 	const [homeTab, setHomeTab] = useState<HomeTab>("characters");
 	const [ismodalOpen, setIsModalOpen] = useState(false);
-	const [characterToDelete, setCharacterToDelete] = useState<Character | null>(
-		null,
-	);
-	const { characters, addCharacter, deleteCharacter } = useCharacters();
+	const { characters, addCharacter } = useCharacters();
 	const router = useRouter();
-
-	const handleConfirmDelete = () => {
-		if (characterToDelete) deleteCharacter(characterToDelete.id);
-		setCharacterToDelete(null);
-	};
 
 	const handleCreate = (draft: CharacterDraft) => {
 		if (!draft.origin || !draft.background || !draft.characterClass) return;
@@ -146,18 +136,6 @@ export default function HomeScreen() {
 											{character.level}
 										</Text>
 									</View>
-									<TouchableOpacity
-										style={styles.deleteButton}
-										onPress={() => setCharacterToDelete(character)}
-										hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-										accessibilityLabel="Видалити персонажа"
-									>
-										<CloseIcon
-											size={11}
-											color={COLORS.textFaint}
-											strokeWidth={1.8}
-										/>
-									</TouchableOpacity>
 									<ChevronRightIcon
 										size={16}
 										color={COLORS.textFaint}
@@ -215,20 +193,6 @@ export default function HomeScreen() {
 				visible={ismodalOpen}
 				onClose={() => setIsModalOpen(false)}
 				onSubmit={handleCreate}
-			/>
-
-			<ConfirmDialog
-				visible={!!characterToDelete}
-				title="Видалити персонажа?"
-				message={
-					characterToDelete
-						? `«${characterToDelete.name}» буде видалено назавжди. Цю дію не можна скасувати.`
-						: ""
-				}
-				confirmLabel="Видалити"
-				destructive
-				onConfirm={handleConfirmDelete}
-				onCancel={() => setCharacterToDelete(null)}
 			/>
 		</SafeAreaView>
 	);
@@ -371,15 +335,6 @@ const styles = StyleSheet.create({
 		fontFamily: FONTS.bodyRegular,
 		fontSize: 11.5,
 		color: COLORS.textMuted,
-	},
-	deleteButton: {
-		width: 24,
-		height: 24,
-		borderRadius: 12,
-		backgroundColor: COLORS.bgElev2,
-		alignItems: "center",
-		justifyContent: "center",
-		flexShrink: 0,
 	},
 
 	bottomNav: {

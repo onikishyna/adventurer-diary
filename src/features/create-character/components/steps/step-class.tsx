@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import {
 	type CharacterClass,
+	ClassFeatures,
 	classIcons,
 	heroes,
 } from "@/entities/character-classes";
@@ -102,6 +103,14 @@ export const StepClass = ({ value, onChange }: StepClassProps) => {
 							</Text>
 						))}
 					</View>
+				</View>
+			)}
+
+			{value && (
+				<View style={styles.featuresBlock}>
+					<Text style={styles.label}>Здібності класу</Text>
+					{/* characters are created at level 1 */}
+					<ClassFeatures features={value.features} level={1} />
 				</View>
 			)}
 		</ScrollView>
@@ -219,5 +228,10 @@ const styles = StyleSheet.create({
 		fontFamily: FONTS.bodyRegular,
 		fontSize: 13,
 		color: COLORS.textMuted,
+	},
+
+	featuresBlock: {
+		marginTop: 12,
+		marginBottom: 8,
 	},
 });

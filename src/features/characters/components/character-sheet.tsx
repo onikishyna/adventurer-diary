@@ -1,27 +1,43 @@
 import type { ComponentType, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	Image,
-	SafeAreaView,
 	ScrollView,
 	StyleSheet,
 	Text,
 	TextInput,
 	TouchableOpacity,
+	useWindowDimensions,
 	View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { originIcons, originImages } from "@/entities/ancestry";
-import type { Character } from "@/entities/character/types";
-import type { Save, Stat } from "@/entities/character-classes";
-import { SKILLS } from "@/entities/skill";
+import type { Character, CharacterNote } from "@/entities/character/types";
+import {
+	ClassFeatures,
+	heroes,
+	type Save,
+	type Stat,
+} from "@/entities/character-classes";
+import { SKILLS, type Skill } from "@/entities/skill";
 import { SPELLS } from "@/entities/spell";
 import { AddItemModal } from "@/features/characters/components/add-item-modal";
+import {
+	CharacterSettingsMenu,
+	type MenuAnchor,
+} from "@/features/characters/components/character-settings-menu";
+import { ChargeTracker } from "@/features/characters/components/charge-tracker";
 import { DamageModal } from "@/features/characters/components/damage-modal";
+import {
+	LevelUpModal,
+	type LevelUpResult,
+} from "@/features/characters/components/level-up-modal";
 import { QuantityStepper } from "@/features/characters/components/quantity-stepper";
 import { useCharacters } from "@/features/characters/use-characters-context";
 import { SpellPickerModal } from "@/features/spells/components/spell-picker-modal";
 import { SpellRow } from "@/features/spells/components/spell-row";
 import { COLORS, FONTS, RADII } from "@/shared/theme";
+import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import {
 	BackpackIcon,
 	ChevronLeftIcon,
@@ -48,6 +64,9 @@ const STATS = [
 
 const MAX_WOUNDS = 5;
 
+// before racial bonuses (e.g. Dwarf −1)
+const BASE_SPEED = 6;
+
 const formatSigned = (value: number) => (value >= 0 ? `+${value}` : `${value}`);
 
 // a class's saves list marks a stat as either proficient ("STR+") or weak
@@ -63,6 +82,8 @@ interface EditableStatCardProps {
 	label: string;
 	value: number;
 	onChangeValue: (next: number | null) => void;
+	// modifiers read as "+2"; absolute values like speed read as a plain "6"
+	signed?: boolean;
 }
 
 function EditableStatCard({
@@ -70,13 +91,15 @@ function EditableStatCard({
 	label,
 	value,
 	onChangeValue,
+	signed = true,
 }: EditableStatCardProps) {
-	const [text, setText] = useState(formatSigned(value));
+	const format = signed ? formatSigned : String;
+	const [text, setText] = useState(format(value));
 	const [isFocused, setIsFocused] = useState(false);
 
 	useEffect(() => {
-		setText(formatSigned(value));
-	}, [value]);
+		setText(format(value));
+	}, [value, format]);
 
 	const handleBlur = () => {
 		setIsFocused(false);
@@ -87,11 +110,11 @@ function EditableStatCard({
 		}
 		const parsed = Number.parseInt(trimmed, 10);
 		if (Number.isNaN(parsed)) {
-			setText(formatSigned(value));
+			setText(format(value));
 			return;
 		}
 		onChangeValue(parsed);
-		setText(formatSigned(parsed));
+		setText(format(parsed));
 	};
 
 	return (
@@ -308,12 +331,119 @@ function EmptyTabState({ icon, title }: EmptyTabStateProps) {
 	);
 }
 
+interface NoteInputProps {
+	value: string;
+	onChangeText: (text: string) => void;
+	onBlur?: () => void;
+	placeholder?: string;
+}
+
+// multiline inputs don't resize to their content on web (and never shrink
+// back), so an invisible Text with the same content sizes the box and the
+// input is stretched over it
+function NoteInput({
+	value,
+	onChangeText,
+	onBlur,
+	placeholder,
+}: NoteInputProps) {
+	return (
+		<View style={styles.noteInputWrap}>
+			<Text style={[styles.abilityText, styles.noteSizer]} aria-hidden>
+				{/* trailing space keeps a final empty line from collapsing */}
+				{`${value || placeholder || ""} `}
+			</Text>
+			<TextInput
+				style={[styles.abilityText, styles.noteInput]}
+				value={value}
+				onChangeText={onChangeText}
+				onBlur={onBlur}
+				placeholder={placeholder}
+				placeholderTextColor={COLORS.textFaint}
+				multiline
+				scrollEnabled={false}
+			/>
+		</View>
+	);
+}
+
+interface NoteCardProps {
+	note: CharacterNote;
+	onChangeText: (text: string) => void;
+	onDelete: () => void;
+}
+
+// edits stay local while typing and are committed on blur, so every
+// keystroke doesn't round-trip through the context + AsyncStorage
+function NoteCard({ note, onChangeText, onDelete }: NoteCardProps) {
+	const [draft, setDraft] = useState(note.text);
+
+	useEffect(() => {
+		setDraft(note.text);
+	}, [note.text]);
+
+	const commit = () => {
+		const trimmed = draft.trim();
+		if (!trimmed) {
+			onDelete();
+		} else if (trimmed !== note.text) {
+			onChangeText(trimmed);
+		}
+	};
+
+	return (
+		<View style={[styles.abilityCard, styles.noteCard]}>
+			<NoteInput value={draft} onChangeText={setDraft} onBlur={commit} />
+			<TouchableOpacity
+				style={styles.deleteItemButton}
+				onPress={onDelete}
+				hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+				accessibilityLabel="Видалити нотатку"
+			>
+				<CloseIcon size={11} color={COLORS.textFaint} strokeWidth={1.8} />
+			</TouchableOpacity>
+		</View>
+	);
+}
+
+function NewNoteInput({ onAdd }: { onAdd: (text: string) => void }) {
+	const [text, setText] = useState("");
+	const trimmed = text.trim();
+
+	const submit = () => {
+		if (!trimmed) return;
+		onAdd(trimmed);
+		setText("");
+	};
+
+	return (
+		<View style={[styles.abilityCard, styles.noteCard, styles.newNoteCard]}>
+			<NoteInput
+				value={text}
+				onChangeText={setText}
+				placeholder="Нова нотатка…"
+			/>
+			<TouchableOpacity
+				style={[styles.addNoteButton, !trimmed && styles.addNoteButtonDisabled]}
+				onPress={submit}
+				disabled={!trimmed}
+				hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+				accessibilityLabel="Додати нотатку"
+			>
+				<PlusIcon size={13} color={COLORS.onAccent} strokeWidth={2.4} />
+			</TouchableOpacity>
+		</View>
+	);
+}
+
 export const CharacterSheet = ({ character, onClose }: Props) => {
-	const { updateCharacter } = useCharacters();
+	const { updateCharacter, deleteCharacter } = useCharacters();
+	const { width: windowWidth } = useWindowDimensions();
 	const [activeTab, setActiveTab] = useState<SheetTab>("stats");
-	const [wounds, setWounds] = useState(0);
-	const [tempHP, setTempHP] = useState(0);
-	const [tempHPMax, setTempHPMax] = useState(0);
+	const settingsButtonRef = useRef<View>(null);
+	const [settingsAnchor, setSettingsAnchor] = useState<MenuAnchor | null>(null);
+	const [levelUpVisible, setLevelUpVisible] = useState(false);
+	const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
 	const [spellPickerVisible, setSpellPickerVisible] = useState(false);
 	const [itemModalVisible, setItemModalVisible] = useState(false);
 	const [damageModalVisible, setDamageModalVisible] = useState(false);
@@ -330,6 +460,45 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 				: [...existing, spellId];
 			return { spells: next };
 		});
+	};
+
+	const openSettings = () => {
+		settingsButtonRef.current?.measureInWindow((x, y, width, height) => {
+			setSettingsAnchor({
+				top: y + height,
+				right: windowWidth - (x + width),
+			});
+		});
+	};
+
+	// the rolled HP raises both the max and the current pool, so a
+	// character doesn't end the level-up looking "damaged"
+	const handleApplyLevelUp = ({ hpGain, skill, subclassId }: LevelUpResult) => {
+		updateCharacter(character.id, (current) => {
+			// characters created before skills existed have none stored — seed
+			// every skill from its governing stat, as creation does
+			const skills =
+				current.skills ??
+				(Object.fromEntries(
+					SKILLS.map(({ id, stat }) => [id, current.stats[stat]]),
+				) as Record<Skill, number>);
+			return {
+				level: current.level + 1,
+				maxHP: current.maxHP + hpGain,
+				currentHP: current.currentHP + hpGain,
+				skills: { ...skills, [skill]: skills[skill] + 1 },
+				...(subclassId && { subclassId }),
+			};
+		});
+		setLevelUpVisible(false);
+	};
+
+	// leave the sheet first — once the character is gone this screen has
+	// nothing to render
+	const handleConfirmDelete = () => {
+		setDeleteConfirmVisible(false);
+		onClose();
+		deleteCharacter(character.id);
 	};
 
 	const handleAddItem = (name: string, quantity: number) => {
@@ -369,6 +538,26 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 		}));
 	};
 
+	const handleAddNote = (text: string) => {
+		updateCharacter(character.id, (current) => ({
+			notes: [...(current.notes ?? []), { id: Date.now().toString(), text }],
+		}));
+	};
+
+	const handleUpdateNote = (noteId: string, text: string) => {
+		updateCharacter(character.id, (current) => ({
+			notes: (current.notes ?? []).map((note) =>
+				note.id === noteId ? { ...note, text } : note,
+			),
+		}));
+	};
+
+	const handleRemoveNote = (noteId: string) => {
+		updateCharacter(character.id, (current) => ({
+			notes: (current.notes ?? []).filter((note) => note.id !== noteId),
+		}));
+	};
+
 	const adjustHP = (delta: number) => {
 		updateCharacter(character.id, (current) => ({
 			currentHP: Math.max(
@@ -388,25 +577,88 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 	// data every render rather than stored on the character
 	const maxWounds = MAX_WOUNDS + (character.origin.bonuses?.maxWounds ?? 0);
 
+	const wounds = Math.min(character.wounds ?? 0, maxWounds);
+	const tempHP = character.tempHP ?? 0;
+	const tempHPMax = character.tempHPMax ?? 0;
+
 	const adjustWounds = (delta: number) => {
-		setWounds((prev) => Math.max(0, Math.min(maxWounds, prev + delta)));
+		updateCharacter(character.id, (current) => ({
+			wounds: Math.max(0, Math.min(maxWounds, (current.wounds ?? 0) + delta)),
+		}));
 	};
 
 	const handleTempHPGrant = (amount: number) => {
-		setTempHPMax(amount);
-		setTempHP(amount);
+		updateCharacter(character.id, { tempHP: amount, tempHPMax: amount });
 	};
 
 	const adjustTempHP = (delta: number) => {
-		setTempHP((prev) => Math.max(0, Math.min(tempHPMax, prev + delta)));
+		updateCharacter(character.id, (current) => ({
+			tempHP: Math.max(
+				0,
+				Math.min(current.tempHPMax ?? 0, (current.tempHP ?? 0) + delta),
+			),
+		}));
 	};
 
 	const dexMod = character.stats.DEX;
+	// the class is snapshotted onto the character at creation, so rules
+	// added later (Zephyr's STR + DEX defense, class resources) are read
+	// from the static data
+	const classRules = heroes.find(
+		(hero) => hero.id === character.characterClass.id,
+	);
+	const defenseStats = classRules?.defenseStats ?? ["DEX"];
+	const subclass = classRules?.subclasses?.find(
+		(option) => option.id === character.subclassId,
+	);
+	const resources = (classRules?.resources ?? [])
+		.filter((resource) => character.level >= (resource.minLevel ?? 1))
+		.map((resource) => {
+			const max = Math.max(0, resource.max(character));
+			return {
+				...resource,
+				max,
+				// clamped on read, in case the max dropped below the spent count
+				used: Math.min(character.usedResources?.[resource.id] ?? 0, max),
+			};
+		});
+
+	const pipResources = resources.filter(
+		(resource) => (resource.display ?? "pips") === "pips",
+	);
+	const fieldResources = resources.filter(
+		(resource) => resource.display === "field",
+	);
+
+	const handleResourceUsedChange = (resourceId: string, used: number) => {
+		updateCharacter(character.id, (current) => ({
+			usedResources: { ...current.usedResources, [resourceId]: used },
+		}));
+	};
+
+	const handleResourceValueChange = (
+		resourceId: string,
+		value: number | null,
+	) => {
+		updateCharacter(character.id, (current) => ({
+			resourceValues: { ...current.resourceValues, [resourceId]: value },
+		}));
+	};
+
 	// racial bonus (e.g. Dragonborn +1 defense) folds into the reactive
-	// default, same as the plain DEX fallback it replaces
-	const defenseDefault = dexMod + (character.origin.bonuses?.defense ?? 0);
+	// default on top of the class's stat sum
+	const defenseDefault =
+		defenseStats.reduce((sum, stat) => sum + character.stats[stat], 0) +
+		(character.origin.bonuses?.defense ?? 0);
 	const defense = character.defense ?? defenseDefault;
 	const initiative = character.initiative ?? dexMod;
+	// racial (Dwarf −1) and class (Zephyr +2 from level 2) bonuses form the
+	// reactive default; a hand-entered value overrides it, like defense
+	const speedDefault =
+		BASE_SPEED +
+		(character.origin.bonuses?.speed ?? 0) +
+		(classRules?.speedBonus?.(character) ?? 0);
+	const speed = character.speed ?? speedDefault;
 	// background bonus (e.g. Виживальник +1) — the hit die *size* still
 	// comes from the class, only the *count* (normally = level) grows
 	const hitDiceCount =
@@ -418,6 +670,10 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 
 	const handleInitiativeChange = (next: number | null) => {
 		updateCharacter(character.id, { initiative: next });
+	};
+
+	const handleSpeedChange = (next: number | null) => {
+		updateCharacter(character.id, { speed: next });
 	};
 
 	return (
@@ -436,64 +692,74 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 					/>
 				</TouchableOpacity>
 				<Text style={styles.topBarTitle}>Лист персонажа</Text>
-				<View style={styles.iconButton}>
+				<TouchableOpacity
+					ref={settingsButtonRef}
+					style={styles.iconButton}
+					onPress={openSettings}
+					accessibilityLabel="Налаштування персонажа"
+					hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+				>
 					<SettingsIcon size={19} color={COLORS.textMuted} strokeWidth={1.6} />
-				</View>
+				</TouchableOpacity>
 			</View>
 
 			<ScrollView
 				showsVerticalScrollIndicator={false}
 				contentContainerStyle={styles.scrollContent}
 			>
-				<View style={styles.summaryCard}>
-					<View style={styles.summaryHeader}>
-						<Image
-							source={originImages[character.origin.id]}
-							style={styles.avatar}
-						/>
-						<View style={styles.summaryText}>
-							<Text style={styles.name}>{character.name}</Text>
-							<Text style={styles.meta}>
-								{character.origin.origin} ·{" "}
-								{character.characterClass.background} · Рівень {character.level}
-							</Text>
+				{/* HP & co. only on the first tab — the others need the room */}
+				{activeTab === "stats" && (
+					<View style={styles.summaryCard}>
+						<View style={styles.summaryHeader}>
+							<Image
+								source={originImages[character.origin.id]}
+								style={styles.avatar}
+							/>
+							<View style={styles.summaryText}>
+								<Text style={styles.name}>{character.name}</Text>
+								<Text style={styles.meta}>
+									{character.origin.origin} ·{" "}
+									{character.characterClass.background} · Рівень{" "}
+									{character.level}
+								</Text>
+							</View>
 						</View>
+
+						<StatBar
+							label="HP"
+							value={character.currentHP}
+							max={character.maxHP}
+							fillColor={COLORS.crimson}
+							onDecrement={() => adjustHP(-1)}
+							onIncrement={() => adjustHP(1)}
+						/>
+
+						<TouchableOpacity
+							style={styles.damageButton}
+							onPress={() => setDamageModalVisible(true)}
+							activeOpacity={0.8}
+							accessibilityLabel="Нанести урон"
+						>
+							<Text style={styles.damageButtonText}>Нанести урон</Text>
+						</TouchableOpacity>
+
+						<TempHPBar
+							value={tempHP}
+							max={tempHPMax}
+							onChangeMax={handleTempHPGrant}
+							onAdjust={adjustTempHP}
+						/>
+
+						<StatBar
+							label="РАНИ"
+							value={wounds}
+							max={maxWounds}
+							fillColor={COLORS.wound}
+							onDecrement={() => adjustWounds(-1)}
+							onIncrement={() => adjustWounds(1)}
+						/>
 					</View>
-
-					<StatBar
-						label="HP"
-						value={character.currentHP}
-						max={character.maxHP}
-						fillColor={COLORS.crimson}
-						onDecrement={() => adjustHP(-1)}
-						onIncrement={() => adjustHP(1)}
-					/>
-
-					<TouchableOpacity
-						style={styles.damageButton}
-						onPress={() => setDamageModalVisible(true)}
-						activeOpacity={0.8}
-						accessibilityLabel="Нанести урон"
-					>
-						<Text style={styles.damageButtonText}>Нанести урон</Text>
-					</TouchableOpacity>
-
-					<TempHPBar
-						value={tempHP}
-						max={tempHPMax}
-						onChangeMax={handleTempHPGrant}
-						onAdjust={adjustTempHP}
-					/>
-
-					<StatBar
-						label="РАНИ"
-						value={wounds}
-						max={maxWounds}
-						fillColor={COLORS.wound}
-						onDecrement={() => adjustWounds(-1)}
-						onIncrement={() => adjustWounds(1)}
-					/>
-				</View>
+				)}
 
 				{activeTab === "stats" && (
 					<>
@@ -594,8 +860,42 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 									value={initiative}
 									onChangeValue={handleInitiativeChange}
 								/>
+								<EditableStatCard
+									code="ШВИД"
+									label="Швидкість"
+									value={speed}
+									signed={false}
+									onChangeValue={handleSpeedChange}
+								/>
+								{fieldResources.map((resource) => (
+									<EditableStatCard
+										key={resource.id}
+										code={resource.code ?? resource.label}
+										label={resource.label}
+										value={
+											character.resourceValues?.[resource.id] ?? resource.max
+										}
+										signed={false}
+										onChangeValue={(next) =>
+											handleResourceValueChange(resource.id, next)
+										}
+									/>
+								))}
 							</View>
 						</View>
+
+						{pipResources.map((resource) => (
+							<View key={resource.id} style={styles.derivedSection}>
+								<ChargeTracker
+									title={resource.label}
+									max={resource.max}
+									used={resource.used}
+									onChangeUsed={(next) =>
+										handleResourceUsedChange(resource.id, next)
+									}
+								/>
+							</View>
+						))}
 					</>
 				)}
 
@@ -688,6 +988,52 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 						<Text style={styles.originDescription}>
 							{character.background.description}
 						</Text>
+
+						{classRules && (
+							<>
+								<Text
+									style={[styles.derivedTitle, styles.originSectionSpacing]}
+								>
+									Клас
+								</Text>
+								<Text style={styles.originMeta}>{classRules.background}</Text>
+								<ClassFeatures
+									features={classRules.features}
+									level={character.level}
+								/>
+
+								{subclass && (
+									<>
+										<Text
+											style={[styles.derivedTitle, styles.originSectionSpacing]}
+										>
+											Підклас
+										</Text>
+										<Text style={styles.originMeta}>{subclass.name}</Text>
+										<Text style={styles.originDescription}>
+											{subclass.tagline}
+										</Text>
+										<ClassFeatures
+											features={subclass.features}
+											level={character.level}
+										/>
+									</>
+								)}
+							</>
+						)}
+
+						<Text style={[styles.derivedTitle, styles.originSectionSpacing]}>
+							Нотатки
+						</Text>
+						{character.notes?.map((note) => (
+							<NoteCard
+								key={note.id}
+								note={note}
+								onChangeText={(text) => handleUpdateNote(note.id, text)}
+								onDelete={() => handleRemoveNote(note.id)}
+							/>
+						))}
+						<NewNoteInput onAdd={handleAddNote} />
 					</View>
 				)}
 			</ScrollView>
@@ -719,6 +1065,36 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 					<PlusIcon size={22} color={COLORS.onAccent} strokeWidth={2.2} />
 				</TouchableOpacity>
 			)}
+
+			<CharacterSettingsMenu
+				anchor={settingsAnchor}
+				onClose={() => setSettingsAnchor(null)}
+				onLevelUp={() => {
+					setSettingsAnchor(null);
+					setLevelUpVisible(true);
+				}}
+				onDelete={() => {
+					setSettingsAnchor(null);
+					setDeleteConfirmVisible(true);
+				}}
+			/>
+
+			<LevelUpModal
+				visible={levelUpVisible}
+				character={character}
+				onClose={() => setLevelUpVisible(false)}
+				onApply={handleApplyLevelUp}
+			/>
+
+			<ConfirmDialog
+				visible={deleteConfirmVisible}
+				title="Видалити персонажа?"
+				message={`«${character.name}» буде видалено назавжди. Цю дію не можна скасувати.`}
+				confirmLabel="Видалити"
+				destructive
+				onConfirm={handleConfirmDelete}
+				onCancel={() => setDeleteConfirmVisible(false)}
+			/>
 
 			<SpellPickerModal
 				visible={spellPickerVisible}
@@ -1107,5 +1483,41 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 		color: COLORS.textMuted,
 		lineHeight: 19,
+	},
+
+	noteCard: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		gap: 10,
+	},
+	newNoteCard: {
+		borderStyle: "dashed",
+		borderColor: COLORS.border,
+		backgroundColor: "transparent",
+	},
+	noteInputWrap: {
+		flex: 1,
+	},
+	noteSizer: {
+		opacity: 0,
+	},
+	noteInput: {
+		...StyleSheet.absoluteFill,
+		padding: 0,
+		textAlignVertical: "top",
+		// biome-ignore lint/suspicious/noExplicitAny: web-only RN style prop
+		outlineStyle: "none" as any,
+	},
+	addNoteButton: {
+		width: 24,
+		height: 24,
+		borderRadius: 12,
+		backgroundColor: COLORS.accent,
+		alignItems: "center",
+		justifyContent: "center",
+		flexShrink: 0,
+	},
+	addNoteButtonDisabled: {
+		opacity: 0.35,
 	},
 });

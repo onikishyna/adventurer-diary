@@ -1,11 +1,5 @@
-import {
-	Modal,
-	SafeAreaView,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
-} from "react-native";
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, FONTS } from "@/shared/theme";
 import { ChevronLeftIcon } from "@/shared/ui/icons";
 import { SpellsBrowser } from "./spells-browser";
