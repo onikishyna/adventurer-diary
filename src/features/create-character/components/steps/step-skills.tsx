@@ -6,6 +6,7 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
+import type { Background } from "@/entities/background";
 import type { Stat } from "@/entities/character-classes";
 import type { Skill } from "@/entities/skill";
 import { DEFAULT_SKILLS, FREE_SKILL_POINTS, SKILLS } from "@/entities/skill";
@@ -16,11 +17,15 @@ interface Props {
 	stats: Record<Stat, number>;
 	value: Record<Skill, number> | null;
 	onChange: (skills: Record<Skill, number> | null) => void;
+	// a background can grant a flat bonus to one skill (e.g. Дикий +1
+	// Naturecraft) — shown here as a preview but never baked into the
+	// committed `value`, so it stays a single source of truth on `background`
+	background?: Background | null;
 }
 
 const formatValue = (val: number) => (val >= 0 ? `+${val}` : `${val}`);
 
-export const StepSkills = ({ stats, value, onChange }: Props) => {
+export const StepSkills = ({ stats, value, onChange, background }: Props) => {
 	// each skill starts at its governing stat's score; bonuses are the 4 free
 	// points layered on top — rehydrate from a previously committed value so
 	// navigating back doesn't lose the allocation
@@ -77,12 +82,21 @@ export const StepSkills = ({ stats, value, onChange }: Props) => {
 
 			<View style={styles.list}>
 				{SKILLS.map(({ id, label, stat }) => {
-					const total = stats[stat] + bonuses[id];
+					const backgroundBonus =
+						background?.bonuses?.skill === id
+							? (background.bonuses.skillBonus ?? 0)
+							: 0;
+					const total = stats[stat] + bonuses[id] + backgroundBonus;
 					return (
 						<View key={id} style={styles.row}>
 							<View style={styles.rowInfo}>
 								<Text style={styles.skillName}>{label}</Text>
 								<Text style={styles.skillStat}>{stat}</Text>
+								{backgroundBonus !== 0 && (
+									<Text style={styles.skillBackgroundBonus}>
+										{background?.title}
+									</Text>
+								)}
 							</View>
 							<TouchableOpacity
 								style={[
@@ -179,6 +193,12 @@ const styles = StyleSheet.create({
 		fontSize: 10.5,
 		letterSpacing: 0.5,
 		color: COLORS.textFaint,
+	},
+	skillBackgroundBonus: {
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 10,
+		fontStyle: "italic",
+		color: COLORS.accent,
 	},
 	stepButton: {
 		width: 26,

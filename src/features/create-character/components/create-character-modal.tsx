@@ -147,6 +147,7 @@ function StepContent({ step, draft, onUpdate }: StepContentProps) {
 					stats={draft.stats ?? { STR: 0, DEX: 0, INT: 0, WIL: 0 }}
 					value={draft.skills}
 					onChange={(skills) => onUpdate({ skills })}
+					background={draft.background}
 				/>
 			);
 		case "summary":

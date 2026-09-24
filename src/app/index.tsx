@@ -46,6 +46,11 @@ export default function HomeScreen() {
 
 	const handleCreate = (draft: CharacterDraft) => {
 		if (!draft.origin || !draft.background || !draft.characterClass) return;
+		// racial max-HP bonus (e.g. Dwarf +2) is baked in at creation since HP
+		// is an independently-tracked resource, not something re-derived on
+		// every render the way defense/wounds/hit dice are
+		const maxHP =
+			draft.characterClass.startingHP + (draft.origin.bonuses?.maxHP ?? 0);
 		const newCharacter: Character = {
 			id: Date.now().toString(),
 			name: draft.name,
@@ -53,8 +58,8 @@ export default function HomeScreen() {
 			background: draft.background,
 			characterClass: draft.characterClass,
 			level: 1,
-			currentHP: draft.characterClass.startingHP,
-			maxHP: draft.characterClass.startingHP,
+			currentHP: maxHP,
+			maxHP,
 			stats: draft.stats ?? { STR: 0, DEX: 0, INT: 0, WIL: 0 },
 			skills: draft.skills ?? DEFAULT_SKILLS,
 		};

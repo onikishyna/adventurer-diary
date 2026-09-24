@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import {
 	Image,
@@ -10,12 +10,13 @@ import {
 	TouchableOpacity,
 	View,
 } from "react-native";
-import { originImages } from "@/entities/ancestry";
+import { originIcons, originImages } from "@/entities/ancestry";
 import type { Character } from "@/entities/character/types";
 import type { Save, Stat } from "@/entities/character-classes";
 import { SKILLS } from "@/entities/skill";
 import { SPELLS } from "@/entities/spell";
 import { AddItemModal } from "@/features/characters/components/add-item-modal";
+import { DamageModal } from "@/features/characters/components/damage-modal";
 import { QuantityStepper } from "@/features/characters/components/quantity-stepper";
 import { useCharacters } from "@/features/characters/use-characters-context";
 import { SpellPickerModal } from "@/features/spells/components/spell-picker-modal";
@@ -25,9 +26,11 @@ import {
 	BackpackIcon,
 	ChevronLeftIcon,
 	CloseIcon,
+	type IconProps,
 	MinusIcon,
 	PlusIcon,
 	SettingsIcon,
+	ShieldIcon,
 	SparkleIcon,
 } from "@/shared/ui/icons";
 
@@ -242,37 +245,51 @@ function TempHPBar({ value, max, onChangeMax, onAdjust }: TempHPBarProps) {
 	);
 }
 
-type SheetTab = "stats" | "inventory" | "spells";
+type SheetTab = "stats" | "inventory" | "spells" | "origin";
 
-const SHEET_TABS: { id: SheetTab; label: string }[] = [
-	{ id: "stats", label: "Характеристики" },
-	{ id: "inventory", label: "Інвентар" },
-	{ id: "spells", label: "Заклинання" },
-];
-
-function SegmentedTabs({
-	active,
-	onSelect,
-}: {
+interface SheetBottomNavProps {
 	active: SheetTab;
 	onSelect: (tab: SheetTab) => void;
-}) {
+	// the "origin" tab's icon depends on the character's own race, so it's
+	// passed in rather than baked into a static list
+	originIcon: ComponentType<IconProps>;
+}
+
+function SheetBottomNav({ active, onSelect, originIcon }: SheetBottomNavProps) {
+	const items: {
+		id: SheetTab;
+		label: string;
+		icon: ComponentType<IconProps>;
+	}[] = [
+		{ id: "stats", label: "Характеристики", icon: ShieldIcon },
+		{ id: "inventory", label: "Інвентар", icon: BackpackIcon },
+		{ id: "spells", label: "Заклинання", icon: SparkleIcon },
+		{ id: "origin", label: "Довідка", icon: originIcon },
+	];
+
 	return (
-		<View style={styles.tabs}>
-			{SHEET_TABS.map((tab) => (
-				<TouchableOpacity
-					key={tab.id}
-					style={[styles.tab, active === tab.id && styles.tabActive]}
-					onPress={() => onSelect(tab.id)}
-					activeOpacity={0.8}
-				>
-					<Text
-						style={[styles.tabText, active === tab.id && styles.tabTextActive]}
+		<View style={styles.bottomNav}>
+			{items.map((item) => {
+				const Icon = item.icon;
+				const isActive = active === item.id;
+				return (
+					<TouchableOpacity
+						key={item.id}
+						style={styles.navItem}
+						activeOpacity={0.7}
+						onPress={() => onSelect(item.id)}
 					>
-						{tab.label}
-					</Text>
-				</TouchableOpacity>
-			))}
+						<Icon
+							size={20}
+							color={isActive ? COLORS.accent : COLORS.textFaint}
+							strokeWidth={1.6}
+						/>
+						<Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
+							{item.label}
+						</Text>
+					</TouchableOpacity>
+				);
+			})}
 		</View>
 	);
 }
@@ -299,6 +316,7 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 	const [tempHPMax, setTempHPMax] = useState(0);
 	const [spellPickerVisible, setSpellPickerVisible] = useState(false);
 	const [itemModalVisible, setItemModalVisible] = useState(false);
+	const [damageModalVisible, setDamageModalVisible] = useState(false);
 
 	const learnedSpells = SPELLS.filter((spell) =>
 		character.spells?.includes(spell.id),
@@ -360,8 +378,18 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 		}));
 	};
 
+	const applyDamage = (amount: number) => {
+		updateCharacter(character.id, (current) => ({
+			currentHP: Math.max(0, current.currentHP - amount),
+		}));
+	};
+
+	// racial bonus (e.g. Dwarf +1 max wounds) — derived from static origin
+	// data every render rather than stored on the character
+	const maxWounds = MAX_WOUNDS + (character.origin.bonuses?.maxWounds ?? 0);
+
 	const adjustWounds = (delta: number) => {
-		setWounds((prev) => Math.max(0, Math.min(MAX_WOUNDS, prev + delta)));
+		setWounds((prev) => Math.max(0, Math.min(maxWounds, prev + delta)));
 	};
 
 	const handleTempHPGrant = (amount: number) => {
@@ -374,8 +402,15 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 	};
 
 	const dexMod = character.stats.DEX;
-	const defense = character.defense ?? dexMod;
+	// racial bonus (e.g. Dragonborn +1 defense) folds into the reactive
+	// default, same as the plain DEX fallback it replaces
+	const defenseDefault = dexMod + (character.origin.bonuses?.defense ?? 0);
+	const defense = character.defense ?? defenseDefault;
 	const initiative = character.initiative ?? dexMod;
+	// background bonus (e.g. Виживальник +1) — the hit die *size* still
+	// comes from the class, only the *count* (normally = level) grows
+	const hitDiceCount =
+		character.level + (character.background.bonuses?.hitDiceBonus ?? 0);
 
 	const handleDefenseChange = (next: number | null) => {
 		updateCharacter(character.id, { defense: next });
@@ -434,6 +469,15 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 						onIncrement={() => adjustHP(1)}
 					/>
 
+					<TouchableOpacity
+						style={styles.damageButton}
+						onPress={() => setDamageModalVisible(true)}
+						activeOpacity={0.8}
+						accessibilityLabel="Нанести урон"
+					>
+						<Text style={styles.damageButtonText}>Нанести урон</Text>
+					</TouchableOpacity>
+
 					<TempHPBar
 						value={tempHP}
 						max={tempHPMax}
@@ -444,14 +488,12 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 					<StatBar
 						label="РАНИ"
 						value={wounds}
-						max={MAX_WOUNDS}
+						max={maxWounds}
 						fillColor={COLORS.wound}
 						onDecrement={() => adjustWounds(-1)}
 						onIncrement={() => adjustWounds(1)}
 					/>
 				</View>
-
-				<SegmentedTabs active={activeTab} onSelect={setActiveTab} />
 
 				{activeTab === "stats" && (
 					<>
@@ -505,17 +547,25 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 							<View style={styles.derivedSection}>
 								<Text style={styles.derivedTitle}>Навички</Text>
 								<View style={styles.statsGrid}>
-									{SKILLS.map(({ id, label, stat }) => (
-										<View key={id} style={styles.statCard}>
-											<View>
-												<Text style={styles.statCode}>{label}</Text>
-												<Text style={styles.statLabel}>{stat}</Text>
+									{SKILLS.map(({ id, label, stat }) => {
+										const backgroundBonus =
+											character.background.bonuses?.skill === id
+												? (character.background.bonuses.skillBonus ?? 0)
+												: 0;
+										return (
+											<View key={id} style={styles.statCard}>
+												<View>
+													<Text style={styles.statCode}>{label}</Text>
+													<Text style={styles.statLabel}>{stat}</Text>
+												</View>
+												<Text style={styles.statValue}>
+													{formatSigned(
+														(character.skills?.[id] ?? 0) + backgroundBonus,
+													)}
+												</Text>
 											</View>
-											<Text style={styles.statValue}>
-												{formatSigned(character.skills?.[id] ?? 0)}
-											</Text>
-										</View>
-									))}
+										);
+									})}
 								</View>
 							</View>
 						)}
@@ -529,7 +579,7 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 										<Text style={styles.statLabel}>Кістка здоров'я</Text>
 									</View>
 									<Text style={styles.statValue}>
-										{character.level}d{character.characterClass.hitDie}
+										{hitDiceCount}d{character.characterClass.hitDie}
 									</Text>
 								</View>
 								<EditableStatCard
@@ -610,7 +660,43 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 							))}
 						</View>
 					))}
+
+				{activeTab === "origin" && (
+					<View style={styles.section}>
+						<Text style={styles.derivedTitle}>Раса</Text>
+						<Text style={styles.originMeta}>
+							{character.origin.origin} · {character.origin.size}
+						</Text>
+						<Text style={styles.originDescription}>
+							{character.origin.description}
+						</Text>
+						<View style={styles.abilityCard}>
+							<Text style={styles.abilityTitle}>
+								{character.origin.ability[0]}
+							</Text>
+							{character.origin.ability.slice(1).map((line) => (
+								<Text key={line} style={styles.abilityText}>
+									{line}
+								</Text>
+							))}
+						</View>
+
+						<Text style={[styles.derivedTitle, styles.originSectionSpacing]}>
+							Передісторія
+						</Text>
+						<Text style={styles.originMeta}>{character.background.title}</Text>
+						<Text style={styles.originDescription}>
+							{character.background.description}
+						</Text>
+					</View>
+				)}
 			</ScrollView>
+
+			<SheetBottomNav
+				active={activeTab}
+				onSelect={setActiveTab}
+				originIcon={originIcons[character.origin.id] ?? ShieldIcon}
+			/>
 
 			{activeTab === "inventory" && (
 				<TouchableOpacity
@@ -645,6 +731,16 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 				visible={itemModalVisible}
 				onClose={() => setItemModalVisible(false)}
 				onSubmit={handleAddItem}
+			/>
+
+			<DamageModal
+				visible={damageModalVisible}
+				defense={defense}
+				onClose={() => setDamageModalVisible(false)}
+				onApply={(finalDamage) => {
+					applyDamage(finalDamage);
+					setDamageModalVisible(false);
+				}}
 			/>
 		</SafeAreaView>
 	);
@@ -781,33 +877,43 @@ const styles = StyleSheet.create({
 		borderBottomColor: COLORS.accent,
 	},
 
-	tabs: {
-		flexDirection: "row",
-		marginTop: 14,
-		padding: 3,
-		gap: 3,
+	damageButton: {
+		alignSelf: "flex-end",
+		paddingVertical: 5,
+		paddingHorizontal: 12,
 		borderRadius: RADII.lg,
-		backgroundColor: COLORS.bgElev,
 		borderWidth: 1,
-		borderColor: COLORS.borderSoft,
+		borderColor: COLORS.crimson,
 	},
-	tab: {
-		flex: 1,
-		paddingVertical: 9,
-		borderRadius: 9,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	tabActive: {
-		backgroundColor: COLORS.accent,
-	},
-	tabText: {
+	damageButtonText: {
 		fontFamily: FONTS.bodySemiBold,
-		fontSize: 12.5,
-		color: COLORS.textMuted,
+		fontSize: 11,
+		color: COLORS.crimson,
 	},
-	tabTextActive: {
-		color: COLORS.onAccent,
+
+	bottomNav: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-around",
+		paddingTop: 10,
+		paddingBottom: 22,
+		paddingHorizontal: 12,
+		borderTopWidth: 1,
+		borderTopColor: COLORS.borderSoft,
+		backgroundColor: COLORS.bg,
+	},
+	navItem: {
+		alignItems: "center",
+		gap: 4,
+	},
+	navLabel: {
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 9.5,
+		color: COLORS.textFaint,
+	},
+	navLabelActive: {
+		fontFamily: FONTS.bodySemiBold,
+		color: COLORS.accent,
 	},
 
 	section: {
@@ -839,7 +945,8 @@ const styles = StyleSheet.create({
 	fab: {
 		position: "absolute",
 		right: 20,
-		bottom: 24,
+		// clears the fixed bottom nav bar below it
+		bottom: 90,
 		width: 52,
 		height: 52,
 		borderRadius: 26,
@@ -960,5 +1067,45 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		flexShrink: 0,
+	},
+
+	originSectionSpacing: {
+		marginTop: 20,
+		paddingTop: 18,
+		borderTopWidth: 1,
+		borderTopColor: COLORS.borderSoft,
+	},
+	originMeta: {
+		fontFamily: FONTS.headingSemiBold,
+		fontSize: 12,
+		letterSpacing: 0.8,
+		textTransform: "uppercase",
+		color: COLORS.textFaint,
+	},
+	originDescription: {
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 13.5,
+		color: COLORS.textMuted,
+		lineHeight: 21,
+	},
+	abilityCard: {
+		marginTop: 4,
+		padding: 14,
+		borderRadius: RADII.xl,
+		backgroundColor: COLORS.bgElev,
+		borderWidth: 1,
+		borderColor: COLORS.borderSoft,
+		gap: 6,
+	},
+	abilityTitle: {
+		fontFamily: FONTS.headingSemiBold,
+		fontSize: 15,
+		color: COLORS.accent,
+	},
+	abilityText: {
+		fontFamily: FONTS.bodyRegular,
+		fontSize: 13,
+		color: COLORS.textMuted,
+		lineHeight: 19,
 	},
 });
