@@ -22,18 +22,24 @@ const CharacterContext = createContext<CharacterContextType | null>(null);
 
 export const CharacterProvider = ({ children }: { children: ReactNode }) => {
 	const [characters, setCharacters] = useState<Character[]>([]);
+	const [isLoaded, setIsLoaded] = useState(false);
 
 	useEffect(() => {
-		AsyncStorage.getItem("characters").then((raw) => {
-			if (raw) {
-				setCharacters(JSON.parse(raw));
-			}
-		});
+		AsyncStorage.getItem("characters")
+			.then((raw) => {
+				if (raw) {
+					setCharacters(JSON.parse(raw));
+				}
+			})
+			.finally(() => setIsLoaded(true));
 	}, []);
 
+	// don't save until the initial load is done — otherwise the empty
+	// initial state can be written first and wipe the stored characters
 	useEffect(() => {
+		if (!isLoaded) return;
 		AsyncStorage.setItem("characters", JSON.stringify(characters));
-	}, [characters]);
+	}, [characters, isLoaded]);
 
 	const addCharacter = (character: Character) => {
 		setCharacters((prev) => [...prev, character]);
