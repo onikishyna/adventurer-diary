@@ -8,7 +8,12 @@ import {
 	View,
 } from "react-native";
 import { COLORS, FONTS, RADII } from "@/shared/theme";
-import { CloseIcon, type IconProps, PlusIcon } from "@/shared/ui/icons";
+import {
+	CloseIcon,
+	type IconProps,
+	PlusIcon,
+	SparkleIcon,
+} from "@/shared/ui/icons";
 
 export interface MenuAnchor {
 	// window coordinates of the button the menu drops down from
@@ -20,6 +25,7 @@ interface Props {
 	anchor: MenuAnchor | null;
 	onClose: () => void;
 	onLevelUp: () => void;
+	onBoons: () => void;
 	onDelete: () => void;
 }
 
@@ -54,6 +60,7 @@ export function CharacterSettingsMenu({
 	anchor,
 	onClose,
 	onLevelUp,
+	onBoons,
 	onDelete,
 }: Props) {
 	return (
@@ -71,6 +78,7 @@ export function CharacterSettingsMenu({
 					]}
 				>
 					<MenuItem label="Левел ап" icon={PlusIcon} onPress={onLevelUp} />
+					<MenuItem label="Boons" icon={SparkleIcon} onPress={onBoons} />
 					<View style={styles.divider} />
 					<MenuItem
 						label="Видалити персонажа"

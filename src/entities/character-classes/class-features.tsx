@@ -12,7 +12,9 @@ interface ClassFeaturesProps {
 // sheet; shared by the sheet's reference tab and the class creation step
 export function ClassFeatures({ features, level }: ClassFeaturesProps) {
 	const unlocked = features.filter(
-		(feature) => (feature.minLevel ?? 1) <= level,
+		(feature) =>
+			(feature.minLevel ?? 1) <= level &&
+			level <= (feature.maxLevel ?? Number.POSITIVE_INFINITY),
 	);
 
 	return (

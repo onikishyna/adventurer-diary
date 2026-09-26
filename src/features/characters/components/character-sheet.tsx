@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { originIcons, originImages } from "@/entities/ancestry";
+import { BOON_TIERS } from "@/entities/boon";
 import type { Character, CharacterNote } from "@/entities/character/types";
 import {
 	ClassFeatures,
@@ -21,7 +22,14 @@ import {
 } from "@/entities/character-classes";
 import { SKILLS, type Skill } from "@/entities/skill";
 import { SPELLS } from "@/entities/spell";
+import {
+	findBoon,
+	getBonusSources,
+	sumBonus,
+	sumSkillBonus,
+} from "@/features/characters/bonuses";
 import { AddItemModal } from "@/features/characters/components/add-item-modal";
+import { BoonsModal } from "@/features/characters/components/boons-modal";
 import {
 	CharacterSettingsMenu,
 	type MenuAnchor,
@@ -443,6 +451,7 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 	const settingsButtonRef = useRef<View>(null);
 	const [settingsAnchor, setSettingsAnchor] = useState<MenuAnchor | null>(null);
 	const [levelUpVisible, setLevelUpVisible] = useState(false);
+	const [boonsVisible, setBoonsVisible] = useState(false);
 	const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
 	const [spellPickerVisible, setSpellPickerVisible] = useState(false);
 	const [itemModalVisible, setItemModalVisible] = useState(false);
@@ -451,6 +460,36 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 	const learnedSpells = SPELLS.filter((spell) =>
 		character.spells?.includes(spell.id),
 	);
+
+	// grouped by tier for the reference tab, each in the order the GM
+	// granted them, like level-up choices
+	const takenBoonTiers = BOON_TIERS.map((tier) => ({
+		tier,
+		boons: (character.boons ?? [])
+			.map((boonId) => tier.boons.find((boon) => boon.id === boonId))
+			.filter((boon) => boon !== undefined),
+	})).filter(({ boons }) => boons.length > 0);
+
+	// HP is stored, not derived, so a boon's HP bonus (Experienced, Veteran)
+	// is added to max and current HP when it's granted and taken back when
+	// it's removed
+	const handleToggleBoon = (boonId: string) => {
+		updateCharacter(character.id, (current) => {
+			const existing = current.boons ?? [];
+			const isRemoving = existing.includes(boonId);
+			const hpBonus = findBoon(boonId)?.bonuses?.maxHP ?? 0;
+			const maxHP = current.maxHP + (isRemoving ? -hpBonus : hpBonus);
+			return {
+				boons: isRemoving
+					? existing.filter((id) => id !== boonId)
+					: [...existing, boonId],
+				maxHP,
+				currentHP: isRemoving
+					? Math.min(current.currentHP, maxHP)
+					: current.currentHP + hpBonus,
+			};
+		});
+	};
 
 	const handleToggleSpell = (spellId: string) => {
 		updateCharacter(character.id, (current) => {
@@ -503,8 +542,8 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 				}
 			}
 			const choices = { ...current.choices };
-			for (const [choiceId, optionId] of Object.entries(choicePicks)) {
-				choices[choiceId] = [...(choices[choiceId] ?? []), optionId];
+			for (const [choiceId, optionIds] of Object.entries(choicePicks)) {
+				choices[choiceId] = [...(choices[choiceId] ?? []), ...optionIds];
 			}
 			return {
 				level: current.level + 1,
@@ -619,17 +658,16 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 				.filter((option) => option !== undefined),
 		}))
 		.filter(({ options }) => options.length > 0);
-	const takenOptions = takenChoices.flatMap(({ options }) => options);
+	// level-up picks and boons whose flat bonuses feed the derived values
+	// below (Mighty Endurance, Battle Hardened, Epic Mind…)
+	const bonusSources = getBonusSources(character);
 
 	// racial (Dwarf +1) and chosen-ability (Mighty Endurance +4) bonuses —
 	// derived every render rather than stored on the character
 	const maxWounds =
 		MAX_WOUNDS +
 		(character.origin.bonuses?.maxWounds ?? 0) +
-		takenOptions.reduce(
-			(sum, option) => sum + (option.bonuses?.maxWounds ?? 0),
-			0,
-		);
+		sumBonus(bonusSources, "maxWounds");
 
 	const wounds = Math.min(character.wounds ?? 0, maxWounds);
 	const tempHP = character.tempHP ?? 0;
@@ -655,11 +693,19 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 	};
 
 	const dexMod = character.stats.DEX;
-	const defenseStats = classRules?.defenseStats ?? ["DEX"];
+	const keyStat = (classRules?.keyStats ??
+		character.characterClass.keyStats)[0];
 	const resources = (classRules?.resources ?? [])
 		.filter((resource) => character.level >= (resource.minLevel ?? 1))
 		.map((resource) => {
-			const max = Math.max(0, resource.max(character));
+			// boons only ever touch mana (Bright, Epic Mind, Smart, Not Book
+			// Smart's −KEY, where KEY is the class's primary key stat)
+			const boonBonus =
+				resource.id === "mana"
+					? sumBonus(bonusSources, "mana") +
+						sumBonus(bonusSources, "manaPerKey") * character.stats[keyStat]
+					: 0;
+			const max = Math.max(0, resource.max(character) + boonBonus);
 			return {
 				...resource,
 				max,
@@ -691,23 +737,28 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 	};
 
 	// racial bonus (e.g. Dragonborn +1 defense) folds into the reactive
-	// default on top of the class's stat sum
+	// default on top of the class's own formula (Zephyr: (DEX+STR), ×2 at 13)
 	const defenseDefault =
-		defenseStats.reduce((sum, stat) => sum + character.stats[stat], 0) +
-		(character.origin.bonuses?.defense ?? 0);
+		(classRules?.defense?.(character) ?? dexMod) +
+		(character.origin.bonuses?.defense ?? 0) +
+		sumBonus(bonusSources, "defense");
 	const defense = character.defense ?? defenseDefault;
-	const initiative = character.initiative ?? dexMod;
-	// racial (Dwarf −1) and class (Zephyr +2 from level 2) bonuses form the
-	// reactive default; a hand-entered value overrides it, like defense
+	const initiative =
+		character.initiative ?? dexMod + sumBonus(bonusSources, "initiative");
+	// racial (Dwarf −1), class (Zephyr +2 from level 2) and boon bonuses form
+	// the reactive default; a hand-entered value overrides it, like defense
 	const speedDefault =
 		BASE_SPEED +
 		(character.origin.bonuses?.speed ?? 0) +
-		(classRules?.speedBonus?.(character) ?? 0);
+		(classRules?.speedBonus?.(character) ?? 0) +
+		sumBonus(bonusSources, "speed");
 	const speed = character.speed ?? speedDefault;
-	// background bonus (e.g. Виживальник +1) — the hit die *size* still
-	// comes from the class, only the *count* (normally = level) grows
+	// background (e.g. Виживальник +1) and boon bonuses — the hit die *size*
+	// still comes from the class, only the *count* (normally = level) grows
 	const hitDiceCount =
-		character.level + (character.background.bonuses?.hitDiceBonus ?? 0);
+		character.level +
+		(character.background.bonuses?.hitDiceBonus ?? 0) +
+		sumBonus(bonusSources, "hitDice");
 
 	const handleDefenseChange = (next: number | null) => {
 		updateCharacter(character.id, { defense: next });
@@ -871,7 +922,9 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 												</View>
 												<Text style={styles.statValue}>
 													{formatSigned(
-														(character.skills?.[id] ?? 0) + backgroundBonus,
+														(character.skills?.[id] ?? 0) +
+															backgroundBonus +
+															sumSkillBonus(bonusSources, id),
 													)}
 												</Text>
 											</View>
@@ -1001,7 +1054,7 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 					) : (
 						<View style={styles.section}>
 							{learnedSpells.map((spell) => (
-								<SpellRow key={spell.id} spell={spell} />
+								<SpellRow key={spell.id} spell={spell} showSchool />
 							))}
 						</View>
 					))}
@@ -1082,6 +1135,21 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 							</>
 						)}
 
+						{takenBoonTiers.map(({ tier, boons }) => (
+							<View key={tier.id}>
+								<Text
+									style={[
+										styles.derivedTitle,
+										styles.originSectionSpacing,
+										styles.choiceTitle,
+									]}
+								>
+									{tier.label}
+								</Text>
+								<ClassFeatures features={boons} level={character.level} />
+							</View>
+						))}
+
 						<Text style={[styles.derivedTitle, styles.originSectionSpacing]}>
 							Нотатки
 						</Text>
@@ -1133,10 +1201,21 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 					setSettingsAnchor(null);
 					setLevelUpVisible(true);
 				}}
+				onBoons={() => {
+					setSettingsAnchor(null);
+					setBoonsVisible(true);
+				}}
 				onDelete={() => {
 					setSettingsAnchor(null);
 					setDeleteConfirmVisible(true);
 				}}
+			/>
+
+			<BoonsModal
+				visible={boonsVisible}
+				selectedIds={character.boons ?? []}
+				onToggle={handleToggleBoon}
+				onClose={() => setBoonsVisible(false)}
 			/>
 
 			<LevelUpModal

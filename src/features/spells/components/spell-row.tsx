@@ -16,6 +16,10 @@ interface SpellRowProps {
 	selectable?: boolean;
 	selected?: boolean;
 	onPress?: () => void;
+	// tag every spell with its school, not just utility cantrips with their
+	// flavor — for flat lists (the character sheet) that aren't already
+	// grouped by school
+	showSchool?: boolean;
 }
 
 export function SpellRow({
@@ -23,9 +27,15 @@ export function SpellRow({
 	selectable,
 	selected,
 	onPress,
+	showSchool,
 }: SpellRowProps) {
-	const flavor = spell.flavor ? SCHOOL_BY_ID[spell.flavor] : null;
-	const FlavorIcon = spell.flavor ? schoolIcons[spell.flavor] : null;
+	// utility cantrips carry their elemental theme as `flavor`; the generic
+	// "cantrip" school itself isn't worth a badge
+	const badgeSchool =
+		spell.flavor ??
+		(showSchool && spell.school !== "cantrip" ? spell.school : null);
+	const flavor = badgeSchool ? SCHOOL_BY_ID[badgeSchool] : null;
+	const FlavorIcon = badgeSchool ? schoolIcons[badgeSchool] : null;
 
 	const details = (
 		<View style={styles.details}>

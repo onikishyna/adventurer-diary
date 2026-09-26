@@ -31,6 +31,8 @@ export interface Character {
 	subclassId?: string;
 	// picked option ids per ClassChoice.id, in the order they were taken
 	choices?: Record<string, string[]>;
+	// boon ids (any BOON_TIERS tier) granted by the GM, in the order added
+	boons?: string[];
 	// spent amount per class resource, keyed by ClassResource.id
 	usedResources?: Record<string, number>;
 	// hand-entered values of "field" resources; null/absent = the max

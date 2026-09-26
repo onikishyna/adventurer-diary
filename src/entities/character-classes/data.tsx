@@ -1,4 +1,4 @@
-import type { CharacterClasses, StatIncrease } from "./types";
+import type { CharacterClasses, ClassFeature, StatIncrease } from "./types";
 
 // the level at which every class picks one of its subclasses
 export const SUBCLASS_LEVEL = 3;
@@ -21,6 +21,15 @@ export const STAT_INCREASES: Record<number, StatIncrease> = {
 	20: { pool: "any", count: 2 },
 };
 
+// features every class gets, appended after its own
+const COMMON_FEATURES: ClassFeature[] = [
+	{
+		title: "EPIC BOON",
+		minLevel: 19,
+		lines: ["Гейм-майстер видає тобі Epic Boon."],
+	},
+];
+
 export const heroes: CharacterClasses = [
 	{
 		id: "berserk",
@@ -35,9 +44,64 @@ export const heroes: CharacterClasses = [
 		features: [
 			{
 				title: "RAGE (дія, 1/хід)",
+				maxLevel: 4,
 				lines: [
 					"Кинь Fury Die (d4) і відклади його. Усі відкладені Fury Dice додаються до КОЖНОЇ атаки через STR.",
 					"Максимум Fury Dice = KEY. Rage можна робити повторно, щоб отримати ще кубик. Якщо вже максимум, кинь новий і вирішуй, які кубики залишити.",
+					"Fury Dice рахуються як кубики шкоди проти броні монстрів.",
+				],
+			},
+			// replaces the block above from level 5 (RAGE (2))
+			{
+				title: "RAGE (дія, 1/хід)",
+				minLevel: 5,
+				maxLevel: 5,
+				lines: [
+					"Кинь 2 Fury Dice (d4) і відклади їх. Усі відкладені Fury Dice додаються до КОЖНОЇ атаки через STR.",
+					"Максимум Fury Dice = KEY. Rage можна робити повторно, щоб отримати ще 2 кубики. Якщо вже максимум, кинь нові й вирішуй, які кубики залишити.",
+					"Fury Dice рахуються як кубики шкоди проти броні монстрів.",
+				],
+			},
+			// from level 6 Fury Dice are d6 (INTENSIFYING FURY (2))
+			{
+				title: "RAGE (дія, 1/хід)",
+				minLevel: 6,
+				maxLevel: 8,
+				lines: [
+					"Кинь 2 Fury Dice (d6) і відклади їх. Усі відкладені Fury Dice додаються до КОЖНОЇ атаки через STR.",
+					"Максимум Fury Dice = KEY. Rage можна робити повторно, щоб отримати ще 2 кубики. Якщо вже максимум, кинь нові й вирішуй, які кубики залишити.",
+					"Fury Dice рахуються як кубики шкоди проти броні монстрів.",
+				],
+			},
+			// from level 9 Fury Dice are d8
+			{
+				title: "RAGE (дія, 1/хід)",
+				minLevel: 9,
+				maxLevel: 12,
+				lines: [
+					"Кинь 2 Fury Dice (d8) і відклади їх. Усі відкладені Fury Dice додаються до КОЖНОЇ атаки через STR.",
+					"Максимум Fury Dice = KEY. Rage можна робити повторно, щоб отримати ще 2 кубики. Якщо вже максимум, кинь нові й вирішуй, які кубики залишити.",
+					"Fury Dice рахуються як кубики шкоди проти броні монстрів.",
+				],
+			},
+			// from level 13 Fury Dice are d10
+			{
+				title: "RAGE (дія, 1/хід)",
+				minLevel: 13,
+				maxLevel: 16,
+				lines: [
+					"Кинь 2 Fury Dice (d10) і відклади їх. Усі відкладені Fury Dice додаються до КОЖНОЇ атаки через STR.",
+					"Максимум Fury Dice = KEY. Rage можна робити повторно, щоб отримати ще 2 кубики. Якщо вже максимум, кинь нові й вирішуй, які кубики залишити.",
+					"Fury Dice рахуються як кубики шкоди проти броні монстрів.",
+				],
+			},
+			// from level 17 Fury Dice are d12
+			{
+				title: "RAGE (дія, 1/хід)",
+				minLevel: 17,
+				lines: [
+					"Кинь 2 Fury Dice (d12) і відклади їх. Усі відкладені Fury Dice додаються до КОЖНОЇ атаки через STR.",
+					"Максимум Fury Dice = KEY. Rage можна робити повторно, щоб отримати ще 2 кубики. Якщо вже максимум, кинь нові й вирішуй, які кубики залишити.",
 					"Fury Dice рахуються як кубики шкоди проти броні монстрів.",
 				],
 			},
@@ -49,9 +113,20 @@ export const heroes: CharacterClasses = [
 			},
 			{
 				title: "RAGE ЗАКІНЧУЄТЬСЯ, якщо:",
+				maxLevel: 17,
 				lines: [
 					"– ти вийшов з бою;",
 					"– ти впав до 0 HP;",
+					"– ти цілий раунд не атакував і не робив Rage.",
+					"Разом із Rage зникають усі Fury Dice.",
+				],
+			},
+			// from level 18 DEEP RAGE drops the 0 HP condition
+			{
+				title: "RAGE ЗАКІНЧУЄТЬСЯ, якщо:",
+				minLevel: 18,
+				lines: [
+					"– ти вийшов з бою;",
 					"– ти цілий раунд не атакував і не робив Rage.",
 					"Разом із Rage зникають усі Fury Dice.",
 				],
@@ -88,6 +163,19 @@ export const heroes: CharacterClasses = [
 					"Коли під час Safe Rest робиш щось помітно руйнівне або демонструєш неабияку силу, можеш змінити свої вибори Берсерка (підклас, Savage Arsenal).",
 				],
 			},
+			{
+				title: "DEEP RAGE",
+				minLevel: 18,
+				lines: ["Падіння до 0 HP більше не закінчує твій Rage."],
+			},
+			{
+				title: "BOUNDLESS RAGE",
+				minLevel: 20,
+				lines: [
+					"Щоразу, коли на Fury Die випадає менше 6, вважай, що випало 6.",
+				],
+			},
+			...COMMON_FEATURES,
 		],
 		subclasses: [
 			{
@@ -105,6 +193,27 @@ export const heroes: CharacterClasses = [
 						title: "MOUNTAINOUS TENACITY",
 						lines: [
 							"Коли витрачаєш Hit Dice на лікування, кожні 10 HP можеш обміняти на зняття 1 Wound.",
+						],
+					},
+					{
+						title: "UNBREAKABLE (1/бій)",
+						minLevel: 7,
+						lines: [
+							"Під час Rage, коли ти мав би отримати останній Wound або інший негативний стан на свій вибір, ти його не отримуєш.",
+						],
+					},
+					{
+						title: "TITAN'S FURY",
+						minLevel: 11,
+						lines: [
+							"Коли промахуєшся атакою або ворог критує тебе, безкоштовно входиш у Rage.",
+						],
+					},
+					{
+						title: "MOUNTAIN'S ENDURANCE",
+						minLevel: 15,
+						lines: [
+							"Поки ти при смерті (Dying), якщо атака по тобі мала б бути критом, її перекидають. Здібності, що спрацьовують від криту (наприклад, Titan's Fury), усе одно спрацьовують.",
 						],
 					},
 				],
@@ -125,6 +234,27 @@ export const heroes: CharacterClasses = [
 						lines: [
 							"Advantage на Perception, щоб помітити або вистежити кров.",
 							"Під час Rage: Blindsight 2 (ігноруєш Blinded і бачиш крізь темряву та невидимість у цьому радіусі).",
+						],
+					},
+					{
+						title: "UNSTOPPABLE BRUTALITY",
+						minLevel: 7,
+						lines: [
+							"Під час Rage можеш отримати 1 Wound, щоб перекинути будь-яку атаку або збереження.",
+						],
+					},
+					{
+						title: "OPPORTUNISTIC FRENZY",
+						minLevel: 11,
+						lines: [
+							"Під час Rage атаки при нагоді (opportunity attacks) не мають disadvantage. Також можеш робити їх, коли ворог входить у досяжність твоєї зброї ближнього бою.",
+						],
+					},
+					{
+						title: "ONSLAUGHT",
+						minLevel: 15,
+						lines: [
+							"Під час Rage: +2 до швидкості. (1/раунд) Можеш рухатися безкоштовно.",
 						],
 					},
 				],
@@ -276,6 +406,32 @@ export const heroes: CharacterClasses = [
 					"Мана закінчилась? Кастувати все одно можна, але за кожен такий каст патрон завдає тобі шкоди в ½ максимуму HP.",
 				],
 			},
+			{
+				title: "GREEDY PACT",
+				minLevel: 12,
+				lines: [
+					"Коли мав би отримати шкоду від перевитрати Pilfered Power, зроби збереження STR:",
+					"– 1–9: отримуєш шкоду як зазвичай (½ максимуму HP);",
+					"– 10–19: отримуєш лише 10 шкоди;",
+					"– 20+: не отримуєш шкоди, а спел кастується так, ніби він на 1 тір вищий.",
+				],
+			},
+			{
+				title: "DIRE SHADOWS",
+				minLevel: 17,
+				lines: [
+					"Атаки по твоїх тіньових міньйонах робляться з disadvantage. Міньйони не отримують шкоди, якщо проходять збереження.",
+				],
+			},
+			{
+				title: "ELDRITCH USURPER",
+				minLevel: 20,
+				lines: [
+					"Коли призиваєш одного тіньового міньйона, призивай двох.",
+					"Міньйони помирають лише тоді, коли отримують 12 або більше шкоди за один раз.",
+				],
+			},
+			...COMMON_FEATURES,
 		],
 		subclasses: [
 			{
@@ -290,6 +446,25 @@ export const heroes: CharacterClasses = [
 							"Твої міньйони стають тіньовими драконятами.",
 							"Shadow Blast і міньйони можуть завдавати шкоди вогнем або некротичної шкоди. При криті накладають Smoldering.",
 						],
+					},
+					{
+						title: "WE'LL ALL BURN!",
+						minLevel: 7,
+						lines: [
+							"Можеш скастувати Pyroclasm без Pilfered Power, якщо включаєш себе в зону шкоди. На своє збереження маєш advantage.",
+						],
+					},
+					{
+						title: "HEART OF BURNING FIRE",
+						minLevel: 11,
+						lines: [
+							"На кожному кидку ініціативи лічильник Pilfered Power (мана) отримує +1 тимчасове використання, яке згоряє після бою.",
+						],
+					},
+					{
+						title: "ENVELOPED BY THE MASTER",
+						minLevel: 15,
+						lines: ["Можеш скастувати Dragonform, отримавши 1d4 Wounds."],
 					},
 				],
 			},
@@ -307,15 +482,38 @@ export const heroes: CharacterClasses = [
 							"Shadow Blast і міньйони можуть завдавати шкоди холодом або некротичної шкоди. Коли вони критують, ти отримуєш INT+LVL тимчасових HP.",
 						],
 					},
+					{
+						title: "SHADOWFROST",
+						minLevel: 7,
+						lines: [
+							"Твій Shadow Blast також накладає Slowed.",
+							"Можеш скастувати Cryosleep або Rimeblades без Pilfered Power, витративши 10 тимчасових HP.",
+						],
+					},
+					{
+						title: "GLACIAL RESILIENCE (1/Safe Rest)",
+						minLevel: 11,
+						lines: [
+							"Реакція (коли тебе атакують або ти мав би отримати стан): отримай 10×LVL тимчасових HP і зніми з себе ВСІ негативні стани. Наприкінці твого наступного ходу залишок цих тимчасових HP зникає.",
+						],
+					},
+					{
+						title: "CRYOMANCER'S REPRISAL",
+						minLevel: 15,
+						lines: [
+							"Можеш скастувати БУДЬ-ЯКИЙ спел школи Ice, заплативши половину максимуму HP.",
+							"Після такого касту отримуєш невидиму ауру: наступна істота, що влучить по тобі атакою ближнього бою в цьому бою, отримує шкоду холодом, рівну половині HP, які ти витратив на цей каст.",
+						],
+					},
 				],
 			},
 		],
 		choices: [
 			{
 				id: "invocation",
-				label: "Інвокація",
-				sectionTitle: "Інвокації",
-				levels: [3],
+				label: "Lesser Invocation",
+				sectionTitle: "Lesser Invocations",
+				levels: [3, 8, 11],
 				options: [
 					{
 						id: "abhorrent-speech",
@@ -484,7 +682,12 @@ export const heroes: CharacterClasses = [
 			{
 				id: "shapeshift",
 				label: "Заряди перетворення",
-				max: ({ stats }) => stats.DEX,
+				// +1 charge at each of levels 6, 9 and 12; Fang & Claw gets
+				// +2 more from level 15 (MASTER OF FORMS (2))
+				max: ({ stats, level, subclassId }) =>
+					stats.DEX +
+					[6, 9, 12].filter((bonusLevel) => level >= bonusLevel).length +
+					(subclassId === "fang-claw" && level >= 15 ? 2 : 0),
 			},
 			{
 				id: "mana",
@@ -536,12 +739,56 @@ export const heroes: CharacterClasses = [
 				],
 			},
 			{
+				title: "DIREBEAST FORM: BEAST OF THE PACK (Medium)",
+				minLevel: 3,
+				lines: [
+					"Перетворення на Medium звіра.",
+					"– +DEX до швидкості, поки триває форма.",
+					"– THUNDERFANG (дія): 1d4+LVL колючої шкоди. Щоразу, коли критуєш або вбиваєш одного чи кількох ворогів, Thunderfang отримує накопичувальні +1d4 шкоди блискавкою до кінця бою.",
+					"– SUPERCHARGE: витрать до WIL мани, і наступна атака Thunderfang завдасть додатково 1d8 шкоди блискавкою за кожну витрачену ману. Якщо промахнешся, цю шкоду отримуєш ти сам.",
+				],
+			},
+			{
 				title: "BE WILD",
 				minLevel: 4,
 				lines: [
 					"Коли під час Safe Rest проводиш день з дикими тваринами, можеш змінити свої вибори Штормшифтера.",
 				],
 			},
+			{
+				title: "DIREBEAST FORM: BEAST OF NIGHTMARES (Tiny)",
+				minLevel: 5,
+				lines: [
+					"Перетворення на будь-якого Tiny звіра чи комаху (за умови, що він жахливий).",
+					"– STING (дія, 1/раунд): Reach 0. 1d4 колючої + 3×LVL кислотної шкоди (ігноруючи броню). При криті 4×LVL замість 3×LVL.",
+					"– SILENT BUT DEADLY: швидкість 2. Не можеш робити Defend чи Interpose. Нападники не можуть тебе обрати ціллю, поки ти не привернеш увагу (наприклад, тебе побачили під час перетворення або атаки).",
+					"– Tiny-форма: атаки по тобі з disadvantage, але БУДЬ-ЯКА шкода скасовує форму.",
+				],
+			},
+			{
+				title: "STORMBORN",
+				minLevel: 8,
+				lines: [
+					"Маєш опір до шкоди блискавкою.",
+					"(1/день) Можеш отримати advantage на перевірку Naturecraft або на перевірку Concentration.",
+				],
+			},
+			{
+				title: "STORMBORN (2)",
+				minLevel: 13,
+				lines: [
+					"Замість кидка кубиків можеш завдати максимальної шкоди спелом школи Wind, витративши 1 заряд Beastshift.",
+					"Щоразу, коли закінчуєш Beastshift, можеш безкоштовно скастувати кантрип.",
+				],
+			},
+			{
+				title: "ARCHDRUID (1/бій)",
+				minLevel: 20,
+				lines: [
+					"Коли входиш у форму Beastshift або виходиш із неї, можеш безкоштовно скастувати спел до 4 тіру.",
+				],
+			},
+			...COMMON_FEATURES,
 		],
 		subclasses: [
 			{
@@ -563,6 +810,32 @@ export const heroes: CharacterClasses = [
 						title: "ATTUNED TO NATURE (1/день)",
 						lines: [
 							"Додай LVL до будь-якої перевірки навички, пов'язаної з природою або погодою.",
+						],
+					},
+					{
+						title: "RAGING TEMPEST",
+						minLevel: 7,
+						lines: [
+							"Коли критуєш тіровим спелом, можеш безкоштовно скастувати кантрип зі школи, яку знаєш і з якої ще не кастував спелів цього ходу (з тим самим рівнем advantage/disadvantage).",
+						],
+					},
+					{
+						title: "PRIMORDIAL FORCE",
+						minLevel: 11,
+						lines: [
+							"Коли витрачаєш 2+ мани на спел, він отримує додатковий ефект залежно від школи:",
+							"– Ice: отримай WIL тимчасових HP.",
+							"– Lightning: додай WIL до шкоди.",
+							"– Radiant: можеш вилікувати істоту в межах 6 клітин на WIL HP.",
+							"– Wind: отримай швидкість польоту на цей хід і безкоштовно рухайся на відстань до 6 клітин.",
+						],
+					},
+					{
+						title: "MASTER OF STORM",
+						minLevel: 15,
+						lines: [
+							"Можеш одночасно тримати концентрацію на 1 спелі Lightning і 1 спелі Wind.",
+							"(1/Safe Rest) Можеш скастувати Ride the Lightning за 0 мани.",
 						],
 					},
 				],
@@ -593,6 +866,114 @@ export const heroes: CharacterClasses = [
 							"Перетворення на нешкідливих тварин не витрачає заряд Beastshift.",
 						],
 					},
+					{
+						title: "UNLEASH THE BEAST (1/бій)",
+						minLevel: 7,
+						lines: ["Коли промахуєшся, можеш замість цього критувати."],
+					},
+					{
+						title: "STORM WAKE (1/бій)",
+						minLevel: 7,
+						lines: [
+							"Дія: витрать 3 мани, щоб перетворитися на Beast of the Pack, і телепортуйся по прямій на відстань до 12 клітин. Кожна обрана тобою істота поруч із твоїм шляхом отримує WIL d8 шкоди блискавкою (без кидка на влучання).",
+						],
+					},
+					{
+						title: "MASTER OF FORMS",
+						minLevel: 11,
+						maxLevel: 14,
+						lines: ["Твої форми можуть мати 2 Chimeric Boons одночасно."],
+					},
+					// replaces the block above; its +2 Beastshift charges and 2 extra
+					// Chimeric Boons are applied by the counter and the level-up
+					{
+						title: "MASTER OF FORMS (2)",
+						minLevel: 15,
+						lines: [
+							"Твої Direbeast-форми можуть мати 3 Chimeric Boons одночасно.",
+						],
+					},
+					{
+						title: "VENOMOUS GAZE (1/бій)",
+						minLevel: 11,
+						lines: [
+							"Дія: витрать 2 мани, щоб перетворитися на Beast of Nightmares. Потім обери істоту в межах 12 клітин: вона робить збереження WIL з disadvantage. Якщо провалює, рухається на 2×WIL клітин до тебе й повторює збереження, доки не пройде його або не зможе рухатися далі. Якщо вона опиниться в твоїй клітині, можеш безкоштовно вжалити її (Sting).",
+						],
+					},
+				],
+			},
+		],
+		choices: [
+			{
+				id: "chimeric-boons",
+				label: "Chimeric Boon",
+				sectionTitle: "Chimeric Boons",
+				levels: [6, 9, 12, 17],
+				countAt: { 6: 2 },
+				// MASTER OF FORMS (2)
+				subclassCountAt: { "fang-claw": { 15: 2 } },
+				options: [
+					{
+						id: "beast-of-the-sea",
+						title: "BEAST OF THE SEA",
+						lines: ["Можеш рухатися, дихати й битися під водою без штрафів."],
+					},
+					{
+						id: "climber",
+						title: "CLIMBER",
+						lines: [
+							"Можеш ходити стінами й стелею. Ігноруєш складну місцевість.",
+						],
+					},
+					{
+						id: "earthwalker",
+						title: "EARTHWALKER",
+						lines: [
+							"+2 до Armor. Можеш прориватися крізь землю й необроблений камінь на половині швидкості (залишаючи тунель). Advantage проти стану Prone.",
+						],
+					},
+					{
+						id: "fleet-footed",
+						title: "FLEET FOOTED",
+						lines: [
+							"+2 до швидкості. Advantage на Stealth і проти стану Grappled.",
+						],
+					},
+					{
+						id: "keen-senses",
+						title: "KEEN SENSES",
+						lines: [
+							"Advantage на Perception та Assess. На тебе не діє Blinded.",
+						],
+					},
+					{
+						id: "leader-of-the-pack",
+						title: "LEADER OF THE PACK",
+						lines: [
+							"Advantage проти ефектів страху й зачарування для тебе і союзників у межах 6 клітин.",
+						],
+					},
+					{
+						id: "phasebeast",
+						title: "PHASEBEAST",
+						lines: [
+							"Коли переходиш із цієї форми у звичайну (або навпаки), можеш телепортуватися на відстань до 6 клітин у місце, яке бачиш.",
+						],
+					},
+					{
+						id: "prehensile-tail",
+						title: "PREHENSILE TAIL",
+						lines: [
+							"Істоти твого розміру або менші, по яких ти влучаєш у ближньому бою, стають Grappled. Якщо влучаєш по більшій істоті, можеш рухатися разом із нею, коли вона рухається.",
+						],
+					},
+					{
+						id: "winged",
+						title: "WINGED",
+						lines: [
+							"Отримуєш швидкість польоту. Поки летиш, примусове переміщення відкидає тебе вдвічі далі.",
+						],
+					},
 				],
 			},
 		],
@@ -605,8 +986,11 @@ export const heroes: CharacterClasses = [
 		startingHP: 13,
 		saves: ["DEX+", "INT–"],
 		armor: "None",
-		defenseStats: ["STR", "DEX"],
-		speedBonus: ({ level }) => (level >= 2 ? 2 : 0),
+		// IRON DEFENSE: unarmored Armor = DEX+STR, doubled from level 13
+		defense: ({ stats, level }) =>
+			(stats.DEX + stats.STR) * (level >= 13 ? 2 : 1),
+		// unarmored movement: +2 from level 2, +4 from level 9
+		speedBonus: ({ level }) => (level >= 9 ? 4 : level >= 2 ? 2 : 0),
 		resources: [
 			{
 				id: "burst",
@@ -614,7 +998,8 @@ export const heroes: CharacterClasses = [
 				code: "BURST",
 				display: "field",
 				minLevel: 2,
-				max: ({ stats }) => stats.DEX,
+				// +1 from level 20 (WINDBORNE)
+				max: ({ stats, level }) => stats.DEX + (level >= 20 ? 1 : 0),
 			},
 		],
 		weapons: ["Melee"],
@@ -642,8 +1027,27 @@ export const heroes: CharacterClasses = [
 			{
 				title: "UNYIELDING RESOLVE",
 				minLevel: 4,
+				maxLevel: 9,
 				lines: [
 					"Ігноруй перший Wound, який ти отримав би в кожному бою. Здібності, що спрацьовують від Wound (наприклад, Kinetic Momentum), усе одно спрацьовують.",
+				],
+			},
+			// replaces the block above from level 10
+			{
+				title: "UNYIELDING RESOLVE (2)",
+				minLevel: 10,
+				maxLevel: 16,
+				lines: [
+					"Ігноруй перші 2 Wounds, які ти отримав би в кожному бою. Здібності, що спрацьовують від Wound (наприклад, Kinetic Momentum), усе одно спрацьовують.",
+				],
+			},
+			// replaces the block above from level 17
+			{
+				title: "UNYIELDING RESOLVE (3)",
+				minLevel: 17,
+				lines: [
+					"Ігноруй перші 3 Wounds, які ти отримав би в кожному бою. Здібності, що спрацьовують від Wound (наприклад, Kinetic Momentum), усе одно спрацьовують.",
+					"Поки ти при смерті (Dying), маєш advantage на збереження STR.",
 				],
 			},
 			{
@@ -653,6 +1057,29 @@ export const heroes: CharacterClasses = [
 					"Коли під час Safe Rest медитуєш наодинці у вітряному місці, можеш змінити свої вибори Зефіра.",
 				],
 			},
+			{
+				title: "REVERBERATING STRIKES",
+				minLevel: 5,
+				lines: [
+					"Додавай LVL дробильної шкоди до всіх своїх атак ближнього бою.",
+				],
+			},
+			{
+				title: "INFUSE STRENGTH",
+				minLevel: 6,
+				lines: [
+					"Дія: зроби удар без зброї по союзнику, щоб передати йому частину своєї сили замість шкоди. Витрать будь-яку кількість своїх Hit Dice і вилікуй його так, як лікуєш себе під час Field Rest (кидаєш кубики й додаєш свій STR до кожного).",
+				],
+			},
+			// its +1 Burst of Speed is applied by the BURST counter
+			{
+				title: "WINDBORNE",
+				minLevel: 20,
+				lines: [
+					"Ти назавжди отримуєш +1 дію. Поки ти при смерті (Dying), маєш максимум 2 дії.",
+				],
+			},
+			...COMMON_FEATURES,
 		],
 		subclasses: [
 			{
@@ -668,6 +1095,27 @@ export const heroes: CharacterClasses = [
 							"Можеш отримати 1 Wound, щоб подвоїти шкоду, яку отримує ворог.",
 						],
 					},
+					{
+						title: "SHARE MY PAIN",
+						minLevel: 7,
+						lines: [
+							"Твій Swiftstrike може також вразити другу істоту в межах Reach 2.",
+						],
+					},
+					{
+						title: "PAIN SHARPENS THE MIND",
+						minLevel: 11,
+						lines: [
+							"Поки ти Bloodied, маєш advantage на першу атаку кожного ходу і на всі збереження.",
+						],
+					},
+					{
+						title: "ECHOED AGONY",
+						minLevel: 15,
+						lines: [
+							"Твій Swiftstrike може також вразити третю істоту в межах Reach 4.",
+						],
+					},
 				],
 			},
 			{
@@ -681,6 +1129,26 @@ export const heroes: CharacterClasses = [
 							"У свій хід можеш добровільно отримати 1 Wound.",
 							"Щоразу, коли ти отримуєш Wound (будь-яким способом), завдай STR+Wounds шкоди істотам на твій вибір у радіусі 2 клітин (ігноруючи броню) і наклади на них Smoldering.",
 						],
+					},
+					{
+						title: "BLAZING SPEED",
+						minLevel: 7,
+						lines: [
+							"+2 до швидкості, поки використовуєш Windstep.",
+							"Коли закінчуєш рух з Windstep, вороги, крізь яких ти пройшов, отримують STR+DEX шкоди вогнем. Вороги зі станом Smoldering можуть отримати подвійну шкоду, і тоді стан з них знімається.",
+						],
+					},
+					{
+						title: "CHAIN REACTION (1/хід)",
+						minLevel: 11,
+						lines: [
+							"Коли критуєш, завдай STR+Wounds шкоди вогнем істотам на твій вибір у межах 2 клітин від цілі. Повторюй скільки завгодно разів: щоразу обирай нові істоти в межах 2 клітин від будь-якої вже враженої.",
+						],
+					},
+					{
+						title: "BURNING SOUL",
+						minLevel: 15,
+						lines: ["Подвоюй будь-яку шкоду вогнем, яку ти завдаєш."],
 					},
 				],
 			},

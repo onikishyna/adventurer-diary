@@ -18,6 +18,7 @@ import {
 	SUBCLASS_LEVEL,
 } from "@/entities/character-classes";
 import { SKILLS, type Skill } from "@/entities/skill";
+import { getBonusSources, sumSkillBonus } from "@/features/characters/bonuses";
 import { COLORS, FONTS, RADII } from "@/shared/theme";
 
 export interface LevelUpResult {
@@ -29,7 +30,7 @@ export interface LevelUpResult {
 	// set only on the level-up that reaches SUBCLASS_LEVEL
 	subclassId?: string;
 	// option picked this level per ClassChoice.id (e.g. an invocation)
-	choicePicks: Record<string, string>;
+	choicePicks: Record<string, string[]>;
 }
 
 const formatSigned = (value: number) => (value >= 0 ? `+${value}` : `${value}`);
@@ -85,7 +86,7 @@ export function LevelUpModal({
 	const [skill, setSkill] = useState<Skill | null>(null);
 	const [stats, setStats] = useState<Stat[]>([]);
 	const [subclassId, setSubclassId] = useState<string | null>(null);
-	const [choicePicks, setChoicePicks] = useState<Record<string, string>>({});
+	const [choicePicks, setChoicePicks] = useState<Record<string, string[]>>({});
 
 	const reset = () => {
 		setStepIndex(0);
@@ -103,8 +104,15 @@ export function LevelUpModal({
 		(hero) => hero.id === character.characterClass.id,
 	);
 	const subclasses = classRules?.subclasses ?? [];
-	const levelChoices = (classRules?.choices ?? []).filter((choice) =>
-		choice.levels.includes(nextLevel),
+	// the class's regular picks this level plus any extra ones its subclass
+	// grants (e.g. Fang & Claw's 2 Chimeric Boons at 15)
+	const pickCount = (choice: ClassChoice) =>
+		(choice.levels.includes(nextLevel)
+			? (choice.countAt?.[nextLevel] ?? 1)
+			: 0) +
+		(choice.subclassCountAt?.[character.subclassId ?? ""]?.[nextLevel] ?? 0);
+	const levelChoices = (classRules?.choices ?? []).filter(
+		(choice) => pickCount(choice) > 0,
 	);
 	const keyStats = classRules?.keyStats ?? character.characterClass.keyStats;
 	const statIncrease = STAT_INCREASES[nextLevel];
@@ -158,7 +166,8 @@ export function LevelUpModal({
 					? stats.length === statIncrease?.count
 					: step.kind === "subclass"
 						? subclassId !== null
-						: choicePicks[step.choice.id] !== undefined;
+						: (choicePicks[step.choice.id]?.length ?? 0) ===
+							pickCount(step.choice);
 
 	const handleNext = () => {
 		if (!canContinue) return;
@@ -187,10 +196,20 @@ export function LevelUpModal({
 		});
 	};
 
-	const toggleChoicePick = (choiceId: string, optionId: string) => {
+	// same rules as stats: a single pick swaps on tap, multi-picks fill up
+	// to the level's count
+	const toggleChoicePick = (choice: ClassChoice, optionId: string) => {
+		const count = pickCount(choice);
 		setChoicePicks((prev) => {
-			const { [choiceId]: current, ...rest } = prev;
-			return current === optionId ? rest : { ...rest, [choiceId]: optionId };
+			const current = prev[choice.id] ?? [];
+			const next = current.includes(optionId)
+				? current.filter((picked) => picked !== optionId)
+				: count === 1
+					? [optionId]
+					: current.length < count
+						? [...current, optionId]
+						: current;
+			return { ...prev, [choice.id]: next };
 		});
 	};
 
@@ -205,13 +224,18 @@ export function LevelUpModal({
 
 	// same displayed value as the sheet: stored skill (falls back to the
 	// governing stat for characters created before skills existed) plus
-	// the background's flat bonus
+	// the background's and boons' flat bonuses
+	const bonusSources = getBonusSources(character);
 	const skillValue = (id: Skill, stat: keyof Character["stats"]) => {
 		const backgroundBonus =
 			character.background.bonuses?.skill === id
 				? (character.background.bonuses.skillBonus ?? 0)
 				: 0;
-		return (character.skills?.[id] ?? character.stats[stat]) + backgroundBonus;
+		return (
+			(character.skills?.[id] ?? character.stats[stat]) +
+			backgroundBonus +
+			sumSkillBonus(bonusSources, id)
+		);
 	};
 
 	const hitDie = character.characterClass.hitDie;
@@ -401,21 +425,39 @@ export function LevelUpModal({
 											<Text style={styles.subclassTagline}>
 												{subclass.tagline}
 											</Text>
-											{subclass.features.map((feature) => (
-												<View
-													key={feature.title}
-													style={styles.subclassFeature}
-												>
-													<Text style={styles.subclassFeatureTitle}>
-														{feature.title}
-													</Text>
-													{feature.lines.map((line) => (
-														<Text key={line} style={styles.subclassFeatureText}>
-															{line}
-														</Text>
-													))}
-												</View>
-											))}
+											{subclass.features.map((feature) => {
+												// features gained later are previewed, dimmed and
+												// tagged with their level, to help pick a subclass
+												const isFuture = (feature.minLevel ?? 1) > nextLevel;
+												return (
+													<View
+														key={feature.title}
+														style={[
+															styles.subclassFeature,
+															isFuture && styles.subclassFeatureFuture,
+														]}
+													>
+														<View style={styles.subclassFeatureHeader}>
+															<Text style={styles.subclassFeatureTitle}>
+																{feature.title}
+															</Text>
+															{isFuture && (
+																<Text style={styles.subclassFeatureLevel}>
+																	Рів. {feature.minLevel}
+																</Text>
+															)}
+														</View>
+														{feature.lines.map((line) => (
+															<Text
+																key={line}
+																style={styles.subclassFeatureText}
+															>
+																{line}
+															</Text>
+														))}
+													</View>
+												);
+											})}
 										</TouchableOpacity>
 									);
 								})}
@@ -426,7 +468,9 @@ export function LevelUpModal({
 					{step.kind === "choice" && (
 						<>
 							<Text style={styles.message}>
-								Обери: {step.choice.label.toLowerCase()}.
+								{pickCount(step.choice) > 1
+									? `Обери ${pickCount(step.choice)}: ${step.choice.sectionTitle}.`
+									: `Обери: ${step.choice.label}.`}
 							</Text>
 
 							<ScrollView
@@ -442,7 +486,7 @@ export function LevelUpModal({
 									)
 									.map((option) => {
 										const isSelected =
-											choicePicks[step.choice.id] === option.id;
+											choicePicks[step.choice.id]?.includes(option.id) ?? false;
 										return (
 											<TouchableOpacity
 												key={option.id}
@@ -450,11 +494,9 @@ export function LevelUpModal({
 													styles.optionCard,
 													isSelected && styles.skillRowSelected,
 												]}
-												onPress={() =>
-													toggleChoicePick(step.choice.id, option.id)
-												}
+												onPress={() => toggleChoicePick(step.choice, option.id)}
 												activeOpacity={0.8}
-												role="radio"
+												role={pickCount(step.choice) > 1 ? "checkbox" : "radio"}
 												aria-checked={isSelected}
 												accessibilityLabel={option.title}
 											>
@@ -672,10 +714,26 @@ const styles = StyleSheet.create({
 		borderTopWidth: 1,
 		borderTopColor: COLORS.borderSoft,
 	},
+	subclassFeatureFuture: {
+		opacity: 0.55,
+	},
+	subclassFeatureHeader: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		justifyContent: "space-between",
+		gap: 8,
+	},
 	subclassFeatureTitle: {
+		flexShrink: 1,
 		fontFamily: FONTS.headingSemiBold,
 		fontSize: 12.5,
 		color: COLORS.accent,
+	},
+	subclassFeatureLevel: {
+		fontFamily: FONTS.bodySemiBold,
+		fontSize: 11,
+		color: COLORS.textFaint,
+		marginTop: 1,
 	},
 	optionCard: {
 		borderWidth: 1,
