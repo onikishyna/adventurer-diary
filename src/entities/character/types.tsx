@@ -29,6 +29,8 @@ export interface Character {
 	notes?: CharacterNote[];
 	// Subclass.id chosen on reaching SUBCLASS_LEVEL
 	subclassId?: string;
+	// picked option ids per ClassChoice.id, in the order they were taken
+	choices?: Record<string, string[]>;
 	// spent amount per class resource, keyed by ClassResource.id
 	usedResources?: Record<string, number>;
 	// hand-entered values of "field" resources; null/absent = the max

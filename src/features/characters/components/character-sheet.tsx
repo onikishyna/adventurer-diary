@@ -473,21 +473,47 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 
 	// the rolled HP raises both the max and the current pool, so a
 	// character doesn't end the level-up looking "damaged"
-	const handleApplyLevelUp = ({ hpGain, skill, subclassId }: LevelUpResult) => {
+	const handleApplyLevelUp = ({
+		hpGain,
+		skill,
+		stats: raisedStats,
+		subclassId,
+		choicePicks,
+	}: LevelUpResult) => {
 		updateCharacter(character.id, (current) => {
 			// characters created before skills existed have none stored — seed
 			// every skill from its governing stat, as creation does
-			const skills =
-				current.skills ??
-				(Object.fromEntries(
-					SKILLS.map(({ id, stat }) => [id, current.stats[stat]]),
-				) as Record<Skill, number>);
+			const skills = {
+				...(current.skills ??
+					(Object.fromEntries(
+						SKILLS.map((definition) => [
+							definition.id,
+							current.stats[definition.stat],
+						]),
+					) as Record<Skill, number>)),
+			};
+			if (skill) skills[skill] += 1;
+			// skills are stored as stat + points, so a raised stat carries
+			// over to every skill it governs
+			const stats = { ...current.stats };
+			for (const stat of raisedStats) {
+				stats[stat] += 1;
+				for (const definition of SKILLS) {
+					if (definition.stat === stat) skills[definition.id] += 1;
+				}
+			}
+			const choices = { ...current.choices };
+			for (const [choiceId, optionId] of Object.entries(choicePicks)) {
+				choices[choiceId] = [...(choices[choiceId] ?? []), optionId];
+			}
 			return {
 				level: current.level + 1,
 				maxHP: current.maxHP + hpGain,
 				currentHP: current.currentHP + hpGain,
-				skills: { ...skills, [skill]: skills[skill] + 1 },
+				stats,
+				skills,
 				...(subclassId && { subclassId }),
+				choices,
 			};
 		});
 		setLevelUpVisible(false);
@@ -573,9 +599,37 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 		}));
 	};
 
-	// racial bonus (e.g. Dwarf +1 max wounds) — derived from static origin
-	// data every render rather than stored on the character
-	const maxWounds = MAX_WOUNDS + (character.origin.bonuses?.maxWounds ?? 0);
+	// the class is snapshotted onto the character at creation, so rules
+	// added later (Zephyr's STR + DEX defense, class resources, level-up
+	// choices) are read from the static data
+	const classRules = heroes.find(
+		(hero) => hero.id === character.characterClass.id,
+	);
+	const subclass = classRules?.subclasses?.find(
+		(option) => option.id === character.subclassId,
+	);
+	// options picked on level-ups (e.g. invocations), in the order taken
+	const takenChoices = (classRules?.choices ?? [])
+		.map((choice) => ({
+			choice,
+			options: (character.choices?.[choice.id] ?? [])
+				.map((optionId) =>
+					choice.options.find((option) => option.id === optionId),
+				)
+				.filter((option) => option !== undefined),
+		}))
+		.filter(({ options }) => options.length > 0);
+	const takenOptions = takenChoices.flatMap(({ options }) => options);
+
+	// racial (Dwarf +1) and chosen-ability (Mighty Endurance +4) bonuses —
+	// derived every render rather than stored on the character
+	const maxWounds =
+		MAX_WOUNDS +
+		(character.origin.bonuses?.maxWounds ?? 0) +
+		takenOptions.reduce(
+			(sum, option) => sum + (option.bonuses?.maxWounds ?? 0),
+			0,
+		);
 
 	const wounds = Math.min(character.wounds ?? 0, maxWounds);
 	const tempHP = character.tempHP ?? 0;
@@ -601,16 +655,7 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 	};
 
 	const dexMod = character.stats.DEX;
-	// the class is snapshotted onto the character at creation, so rules
-	// added later (Zephyr's STR + DEX defense, class resources) are read
-	// from the static data
-	const classRules = heroes.find(
-		(hero) => hero.id === character.characterClass.id,
-	);
 	const defenseStats = classRules?.defenseStats ?? ["DEX"];
-	const subclass = classRules?.subclasses?.find(
-		(option) => option.id === character.subclassId,
-	);
 	const resources = (classRules?.resources ?? [])
 		.filter((resource) => character.level >= (resource.minLevel ?? 1))
 		.map((resource) => {
@@ -1019,6 +1064,21 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 										/>
 									</>
 								)}
+
+								{takenChoices.map(({ choice, options }) => (
+									<View key={choice.id}>
+										<Text
+											style={[
+												styles.derivedTitle,
+												styles.originSectionSpacing,
+												styles.choiceTitle,
+											]}
+										>
+											{choice.sectionTitle}
+										</Text>
+										<ClassFeatures features={options} level={character.level} />
+									</View>
+								))}
 							</>
 						)}
 
@@ -1450,6 +1510,10 @@ const styles = StyleSheet.create({
 		paddingTop: 18,
 		borderTopWidth: 1,
 		borderTopColor: COLORS.borderSoft,
+	},
+	// wrapped in its own View, so it doesn't get the section's gap
+	choiceTitle: {
+		marginBottom: 10,
 	},
 	originMeta: {
 		fontFamily: FONTS.headingSemiBold,

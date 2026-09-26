@@ -1,7 +1,25 @@
-import type { CharacterClasses } from "./types";
+import type { CharacterClasses, StatIncrease } from "./types";
 
 // the level at which every class picks one of its subclasses
 export const SUBCLASS_LEVEL = 3;
+
+// levels whose level-up grants one skill point
+export const SKILL_POINT_LEVELS = [2, 3];
+
+// levels whose level-up grants +1 to stats: `pool` is which stats can be
+// picked ("key" = the class's key stats, "secondary" = the other two,
+// "any" = all four), `count` how many different ones get +1
+export const STAT_INCREASES: Record<number, StatIncrease> = {
+	4: { pool: "key", count: 1 },
+	5: { pool: "secondary", count: 1 },
+	8: { pool: "key", count: 1 },
+	9: { pool: "secondary", count: 1 },
+	12: { pool: "key", count: 1 },
+	13: { pool: "secondary", count: 1 },
+	16: { pool: "key", count: 1 },
+	17: { pool: "secondary", count: 1 },
+	20: { pool: "any", count: 2 },
+};
 
 export const heroes: CharacterClasses = [
 	{
@@ -53,6 +71,23 @@ export const heroes: CharacterClasses = [
 					"Коли треба вибрати напрямок чи рішення, можеш звернутися до предків. Вони вкажуть найнебезпечніший або найскладніший шлях.",
 				],
 			},
+			{
+				title: "ENDURING RAGE",
+				minLevel: 4,
+				lines: [
+					"Поки ти при смерті (Dying):",
+					"– на початку свого ходу автоматично безкоштовно входиш у Rage;",
+					"– маєш максимум 2 дії замість 1;",
+					"– не робиш STR-збереження, щоб атакувати.",
+				],
+			},
+			{
+				title: "WRATH & RUIN",
+				minLevel: 4,
+				lines: [
+					"Коли під час Safe Rest робиш щось помітно руйнівне або демонструєш неабияку силу, можеш змінити свої вибори Берсерка (підклас, Savage Arsenal).",
+				],
+			},
 		],
 		subclasses: [
 			{
@@ -90,6 +125,97 @@ export const heroes: CharacterClasses = [
 						lines: [
 							"Advantage на Perception, щоб помітити або вистежити кров.",
 							"Під час Rage: Blindsight 2 (ігноруєш Blinded і бачиш крізь темряву та невидимість у цьому радіусі).",
+						],
+					},
+				],
+			},
+		],
+		choices: [
+			{
+				id: "savage-arsenal",
+				label: "Savage Arsenal",
+				sectionTitle: "Savage Arsenal",
+				levels: [4, 6, 8, 10, 12, 14, 16],
+				options: [
+					{
+						id: "death-blow",
+						title: "DEATH BLOW",
+						lines: [
+							"Після шкоди від криту можеш скинути будь-яку кількість Fury Dice. Складіть їхні значення й завдай подвійну шкоду.",
+						],
+					},
+					{
+						id: "deathless-rage",
+						title: "DEATHLESS RAGE (1/хід)",
+						lines: [
+							"Поки ти при смерті, можеш отримати 1 Wound, щоб отримати 1 дію.",
+						],
+					},
+					{
+						id: "eager-for-battle",
+						title: "EAGER FOR BATTLE",
+						lines: [
+							"Advantage на ініціативу. У перший хід кожного бою безкоштовно рухаєшся на 2×DEX клітин.",
+						],
+					},
+					{
+						id: "into-the-fray",
+						title: "INTO THE FRAY",
+						lines: [
+							"Дія: стрибни на 2×DEX клітин у бік ворога. Якщо приземлишся поруч щонайменше з 2 ворогами, безкоштовно атакуй одного з них.",
+						],
+					},
+					{
+						id: "mighty-endurance",
+						title: "MIGHTY ENDURANCE",
+						lines: ["Можеш пережити ще 4 Wounds до смерті."],
+						bonuses: { maxWounds: 4 },
+					},
+					{
+						id: "more-blood",
+						title: "MORE BLOOD!",
+						lines: ["Коли ворог критує тебе, отримуєш 1 Fury Die."],
+					},
+					{
+						id: "rampage",
+						title: "RAMPAGE (1/хід)",
+						lines: [
+							"Після влучання можеш вважати, що на наступній атаці цього ходу випало те саме значення (не кидай знову).",
+						],
+					},
+					{
+						id: "swift-fury",
+						title: "SWIFT FURY",
+						lines: [
+							"Коли отримуєш 1+ Fury Dice, безкоштовно рухаєшся на DEX клітин, ігноруючи складну місцевість.",
+						],
+					},
+					{
+						id: "thunderous-steps",
+						title: "THUNDEROUS STEPS",
+						lines: [
+							"Після руху щонайменше на 4 клітини під час Rage можеш завдати STR дробильної шкоди всім сусіднім істотам там, де зупинився.",
+						],
+					},
+					{
+						id: "unstoppable-force",
+						title: "UNSTOPPABLE FORCE",
+						lines: [
+							"Поки ти при смерті й у Rage, шкода дає 1 Wound (замість 2), а крит 2 Wounds (замість 3).",
+						],
+					},
+					{
+						id: "whirlwind",
+						title: "WHIRLWIND",
+						lines: [
+							"2 дії: атакуй УСІ цілі в межах досяжності своєї зброї ближнього бою.",
+						],
+					},
+					{
+						id: "youre-next",
+						title: "YOU'RE NEXT!",
+						lines: [
+							"Дія, під час Rage: перевірка Might, щоб залякати ворога в межах Reach 12 (DC = його поточні HP). При успіху він одразу тікає з бою.",
 						],
 					},
 				],
@@ -184,6 +310,167 @@ export const heroes: CharacterClasses = [
 				],
 			},
 		],
+		choices: [
+			{
+				id: "invocation",
+				label: "Інвокація",
+				sectionTitle: "Інвокації",
+				levels: [3],
+				options: [
+					{
+						id: "abhorrent-speech",
+						title: "ABHORRENT SPEECH",
+						lines: [
+							"Можеш спілкуватися з жахливими істотами (аберації, нежить тощо).",
+						],
+					},
+					{
+						id: "beguiling-influence",
+						title: "BEGUILING INFLUENCE (1/день)",
+						lines: ["Можеш перекинути перевірку Influence."],
+					},
+					{
+						id: "blood-sight",
+						title: "BLOOD SIGHT (1/день)",
+						lines: [
+							"Можеш перекинути перевірку Examination. Також бачиш сліди крові на поверхні, навіть якщо її вже відмили.",
+						],
+					},
+					{
+						id: "devoted-acolyte",
+						title: "DEVOTED ACOLYTE",
+						lines: [
+							"Вивчи 2 мови на вибір: Celestial, Draconic, Deep Speak, Infernal або Primordial. Advantage на Lore щодо тем, пов'язаних із цими мовами.",
+						],
+					},
+					{
+						id: "eldritch-sense",
+						title: "ELDRITCH SENSE",
+						lines: [
+							"Відчуваєш перевертнів та істот, прихованих магією, у радіусі 6 клітин.",
+						],
+					},
+					{
+						id: "gaze-of-two-minds",
+						title: "GAZE OF TWO MINDS",
+						lines: [
+							"Торкнись згодної істоти й сприймай світ її чуттями замість своїх, поки тримаєш концентрацію.",
+						],
+					},
+					{
+						id: "knowledge-from-beyond",
+						title: "KNOWLEDGE FROM BEYOND",
+						lines: [
+							"Коли провалюєш перевірку Insight або Arcana, можеш отримати 1 Wound, щоб вона стала успішною.",
+						],
+					},
+					{
+						id: "my-favored-pet",
+						title: "MY FAVORED PET",
+						lines: [
+							"Один тіньовий міньйон неохоче терпить тебе й поза боєм. Він може (дуже моторошно) виконувати будь-яку просту роботу, яку зміг би виконати дуже посередній селянин.",
+						],
+					},
+					{
+						id: "voice-of-the-dark",
+						title: "VOICE OF THE DARK",
+						lines: [
+							"Можеш телепатично спілкуватися з гуманоїдом у радіусі 6 клітин.",
+						],
+					},
+					{
+						id: "whispers-of-the-grave",
+						title: "WHISPERS OF THE GRAVE (1/день)",
+						lines: [
+							"Можеш поставити мертвій істоті 3 питання, на які відповідають «так» або «ні». Цю істоту більше ніколи не можна допитати таким способом.",
+						],
+					},
+				],
+			},
+			{
+				id: "greater-invocation",
+				label: "Greater Invocation",
+				sectionTitle: "Greater Invocations",
+				levels: [4, 6, 9, 14, 18],
+				options: [
+					{
+						id: "armor-of-shadows",
+						title: "ARMOR OF SHADOWS",
+						lines: [
+							"Зменшуй усю отримувану шкоду на кількість своїх міньйонів.",
+						],
+					},
+					{
+						id: "fiendish-boon",
+						title: "FIENDISH BOON",
+						lines: ["+1 до DEX або INT. Максимум Hit Dice на 1 менший."],
+					},
+					{
+						id: "hungering-shadows",
+						title: "HUNGERING SHADOWS",
+						lines: [
+							"Коли твоя тінь критує, наступний тіровий спел у цьому бою не витрачає Pilfered Power.",
+						],
+					},
+					{
+						id: "one-with-shadows",
+						title: "ONE WITH SHADOWS",
+						lines: [
+							"Дія: у тьмяному світлі або темряві стаєш невидимим, поки не рухнешся або не атакуєш.",
+						],
+					},
+					{
+						id: "repelling-blast",
+						title: "REPELLING BLAST",
+						lines: [
+							"Коли влучаєш Shadow Blast по Medium або меншій істоті, можеш відштовхнути її на 2 клітини від себе.",
+						],
+					},
+					{
+						id: "shadow-magus",
+						title: "SHADOW MAGUS",
+						lines: [
+							"Міньйони отримують +4 Reach і завдають d10 шкоди замість d12.",
+						],
+					},
+					{
+						id: "shadow-spear",
+						title: "SHADOW SPEAR",
+						lines: [
+							"Shadow Blast б'є вдвічі далі, ігнорує укриття, а по Prone-цілях атакує з advantage (замість disadvantage).",
+						],
+					},
+					{
+						id: "shadow-rush",
+						title: "SHADOW RUSH",
+						lines: [
+							"Коли міньйони атакують, будь-хто з них замість кидка може завдати максимальної шкоди й після цього померти.",
+						],
+					},
+					{
+						id: "shadow-warp",
+						title: "SHADOW WARP",
+						lines: [
+							"Дія: помінятися місцями з істотою в межах 12 клітин, якій цього ходу завдали некротичної шкоди.",
+						],
+					},
+					{
+						id: "swarming-shadows",
+						title: "SWARMING SHADOWS",
+						lines: [
+							"Коли твоя тінь критує, призови ще одного міньйона поруч із ціллю.",
+						],
+					},
+					{
+						id: "vengeful-blast",
+						title: "VENGEFUL BLAST",
+						lines: [
+							"Коли міньйон помирає, можеш реакцією скастувати Shadow Blast (навіть якщо вже кастував його цього ходу).",
+						],
+					},
+				],
+			},
+		],
 	},
 	{
 		id: "stormshifter",
@@ -246,6 +533,13 @@ export const heroes: CharacterClasses = [
 					"– Тимчасові HP: DEX+LVL (зникають, коли закінчується форма).",
 					"– GORE (дія): 1d6+LVL шкоди. При влучанні отримуєш ще LVL тимчасових HP.",
 					"– FEARSOME: коли робиш Interpose або Defend, можеш витратити 1 ману, щоб змусити ворога перекинути атаку. Ти обираєш, який із двох результатів залишити.",
+				],
+			},
+			{
+				title: "BE WILD",
+				minLevel: 4,
+				lines: [
+					"Коли під час Safe Rest проводиш день з дикими тваринами, можеш змінити свої вибори Штормшифтера.",
 				],
 			},
 		],
@@ -345,6 +639,20 @@ export const heroes: CharacterClasses = [
 					"Заряди видаються на кидку ініціативи й згоряють після бою.",
 				],
 			},
+			{
+				title: "UNYIELDING RESOLVE",
+				minLevel: 4,
+				lines: [
+					"Ігноруй перший Wound, який ти отримав би в кожному бою. Здібності, що спрацьовують від Wound (наприклад, Kinetic Momentum), усе одно спрацьовують.",
+				],
+			},
+			{
+				title: "FOCUS",
+				minLevel: 4,
+				lines: [
+					"Коли під час Safe Rest медитуєш наодинці у вітряному місці, можеш змінити свої вибори Зефіра.",
+				],
+			},
 		],
 		subclasses: [
 			{
@@ -372,6 +680,93 @@ export const heroes: CharacterClasses = [
 						lines: [
 							"У свій хід можеш добровільно отримати 1 Wound.",
 							"Щоразу, коли ти отримуєш Wound (будь-яким способом), завдай STR+Wounds шкоди істотам на твій вибір у радіусі 2 клітин (ігноруючи броню) і наклади на них Smoldering.",
+						],
+					},
+				],
+			},
+		],
+		choices: [
+			{
+				id: "martial-arts",
+				label: "Martial Arts",
+				sectionTitle: "Martial Arts",
+				levels: [4, 6, 8, 10, 12, 14, 16, 18],
+				options: [
+					{
+						id: "airshift",
+						title: "AIRSHIFT",
+						lines: [
+							"Поки ти при тямі, тебе не можна схопити (Grappled). Під час руху можеш пересуватися будь-якою поверхнею як звичайною землею, ігноруючи всі негативні ефекти (стіни, стеля, вода, верхівки дерев, лава, шипи, хмари).",
+						],
+					},
+					{
+						id: "blur",
+						title: "BLUR (1/бій)",
+						lines: [
+							"Коли робиш Defend, можеш спочатку відійти на половину швидкості. Якщо після цього ти поза досяжністю або за повним укриттям, шкоди не отримуєш.",
+						],
+					},
+					{
+						id: "bodily-discipline",
+						title: "BODILY DISCIPLINE",
+						lines: [
+							"Можеш витратити 1 дію, щоб зняти з себе будь-який стан, крім Wound.",
+						],
+					},
+					{
+						id: "enduring-soul",
+						title: "ENDURING SOUL",
+						lines: [
+							"Щоразу на кидку ініціативи отримуєш стільки Hit Dice, скільки дій маєш у свій перший хід. Невикористані зникають після бою.",
+						],
+					},
+					{
+						id: "i-jump-on-his-back",
+						title: "I JUMP ON HIS BACK!",
+						lines: [
+							"Коли рухаєшся з Windstep у клітину істоти твого розміру або більшої, можеш застрибнути їй на спину. Поки ти на ній: advantage на атаки ближнього бою по ній, а шкоди, якої ти уникнув, отримує вона.",
+						],
+					},
+					{
+						id: "kinetic-barrage",
+						title: "KINETIC BARRAGE",
+						lines: [
+							"Щоразу, коли промахуєшся, отримуєш накопичувальний бонус +STR до всієї шкоди до кінця бою. Дисциплінований майстер бойових мистецтв не промахується навмисно.",
+						],
+					},
+					{
+						id: "mighty-soul",
+						title: "MIGHTY SOUL",
+						lines: [
+							"Тебе не можна зрушити проти волі. Коли провалюєш збереження, можеш отримати Wound, щоб додати STR до результату. Можна повторювати скільки завгодно разів.",
+						],
+					},
+					{
+						id: "quickstrike",
+						title: "QUICKSTRIKE",
+						lines: [
+							"Коли робиш Interpose, можеш спочатку безкоштовно вдарити ворога без зброї.",
+						],
+					},
+					{
+						id: "use-momentum",
+						title: "USE MOMENTUM",
+						lines: [
+							"Коли повністю уникаєш шкоди від атаки ближнього бою (промах або Defend), можеш помінятися місцями з нападником. Потім обери іншу ціль у межах досяжності цієї атаки, і влучають по ній.",
+						],
+					},
+					{
+						id: "vital-rejuvenation",
+						title: "VITAL REJUVENATION",
+						lines: [
+							"Коли вперше за хід тебе лікують, можеш вилікувати іншу ціль у межах 6 клітин на STR HP.",
+						],
+					},
+					{
+						id: "windstrider",
+						title: "WINDSTRIDER",
+						lines: [
+							"Якщо з Windstep рухаєшся крізь клітину згодної істоти, вона може рухатися з тобою й зупинитися на будь-якій клітині поруч із твоїм шляхом.",
 						],
 					},
 				],

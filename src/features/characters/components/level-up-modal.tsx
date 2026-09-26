@@ -9,19 +9,54 @@ import {
 	View,
 } from "react-native";
 import type { Character } from "@/entities/character/types";
-import { heroes, SUBCLASS_LEVEL } from "@/entities/character-classes";
+import {
+	type ClassChoice,
+	heroes,
+	SKILL_POINT_LEVELS,
+	STAT_INCREASES,
+	type Stat,
+	SUBCLASS_LEVEL,
+} from "@/entities/character-classes";
 import { SKILLS, type Skill } from "@/entities/skill";
 import { COLORS, FONTS, RADII } from "@/shared/theme";
 
 export interface LevelUpResult {
 	hpGain: number;
-	// the skill that receives this level's single skill point
-	skill: Skill;
+	// the skill that receives this level's skill point (SKILL_POINT_LEVELS)
+	skill?: Skill;
+	// stats raised by 1 each (STAT_INCREASES); empty on other levels
+	stats: Stat[];
 	// set only on the level-up that reaches SUBCLASS_LEVEL
 	subclassId?: string;
+	// option picked this level per ClassChoice.id (e.g. an invocation)
+	choicePicks: Record<string, string>;
 }
 
 const formatSigned = (value: number) => (value >= 0 ? `+${value}` : `${value}`);
+
+const ALL_STATS: Stat[] = ["STR", "DEX", "INT", "WIL"];
+
+const STAT_STEP_TEXT = {
+	key: {
+		label: "Ключова характеристика",
+		message: "Обери ключову характеристику, яка отримує +1.",
+	},
+	secondary: {
+		label: "Другорядна характеристика",
+		message: "Обери другорядну характеристику, яка отримує +1.",
+	},
+	any: {
+		label: "Характеристики",
+		message: "Обери дві різні характеристики, кожна отримує +1.",
+	},
+} as const;
+
+const STAT_LABELS: Record<Stat, string> = {
+	STR: "Сила",
+	DEX: "Спритність",
+	INT: "Інтелект",
+	WIL: "Воля",
+};
 
 interface LevelUpModalProps {
 	visible: boolean;
@@ -30,15 +65,14 @@ interface LevelUpModalProps {
 	onApply: (result: LevelUpResult) => void;
 }
 
-type StepId = "hp" | "skills" | "subclass";
-
-// the level-up flow is a sequence of steps, rendered by id below; the
+// the level-up flow is a sequence of steps, rendered by kind below; the
 // common ones run every level, level-specific ones are appended per level
-const STEP_LABELS: Record<StepId, string> = {
-	hp: "Здоров'я",
-	skills: "Навички",
-	subclass: "Підклас",
-};
+type Step =
+	| { kind: "hp"; label: string }
+	| { kind: "skills"; label: string }
+	| { kind: "stat"; label: string }
+	| { kind: "subclass"; label: string }
+	| { kind: "choice"; label: string; choice: ClassChoice };
 
 export function LevelUpModal({
 	visible,
@@ -49,27 +83,59 @@ export function LevelUpModal({
 	const [stepIndex, setStepIndex] = useState(0);
 	const [hpText, setHpText] = useState("");
 	const [skill, setSkill] = useState<Skill | null>(null);
+	const [stats, setStats] = useState<Stat[]>([]);
 	const [subclassId, setSubclassId] = useState<string | null>(null);
+	const [choicePicks, setChoicePicks] = useState<Record<string, string>>({});
 
 	const reset = () => {
 		setStepIndex(0);
 		setHpText("");
 		setSkill(null);
+		setStats([]);
 		setSubclassId(null);
+		setChoicePicks({});
 	};
 
 	const nextLevel = character.level + 1;
 	// read from the static data — the class stored on the character is a
-	// snapshot from creation and may predate subclasses
-	const subclasses =
-		heroes.find((hero) => hero.id === character.characterClass.id)
-			?.subclasses ?? [];
-	const steps: StepId[] = [
-		"hp",
-		"skills",
-		...(nextLevel === SUBCLASS_LEVEL && subclasses.length > 0
-			? (["subclass"] as const)
+	// snapshot from creation and may predate subclasses and choices
+	const classRules = heroes.find(
+		(hero) => hero.id === character.characterClass.id,
+	);
+	const subclasses = classRules?.subclasses ?? [];
+	const levelChoices = (classRules?.choices ?? []).filter((choice) =>
+		choice.levels.includes(nextLevel),
+	);
+	const keyStats = classRules?.keyStats ?? character.characterClass.keyStats;
+	const statIncrease = STAT_INCREASES[nextLevel];
+	const statPool: Stat[] = !statIncrease
+		? []
+		: statIncrease.pool === "key"
+			? keyStats
+			: statIncrease.pool === "secondary"
+				? ALL_STATS.filter((id) => !keyStats.includes(id))
+				: ALL_STATS;
+	const steps: Step[] = [
+		{ kind: "hp", label: "Здоров'я" },
+		...(SKILL_POINT_LEVELS.includes(nextLevel)
+			? [{ kind: "skills" as const, label: "Навички" }]
 			: []),
+		...(statIncrease
+			? [
+					{
+						kind: "stat" as const,
+						label: STAT_STEP_TEXT[statIncrease.pool].label,
+					},
+				]
+			: []),
+		...(nextLevel === SUBCLASS_LEVEL && subclasses.length > 0
+			? [{ kind: "subclass" as const, label: "Підклас" }]
+			: []),
+		...levelChoices.map((choice) => ({
+			kind: "choice" as const,
+			label: choice.label,
+			choice,
+		})),
 	];
 
 	const handleClose = () => {
@@ -83,11 +149,16 @@ export function LevelUpModal({
 
 	const step = steps[stepIndex];
 	const isLastStep = stepIndex === steps.length - 1;
-	const canContinue = {
-		hp: isValidHpGain,
-		skills: skill !== null,
-		subclass: subclassId !== null,
-	}[step];
+	const canContinue =
+		step.kind === "hp"
+			? isValidHpGain
+			: step.kind === "skills"
+				? skill !== null
+				: step.kind === "stat"
+					? stats.length === statIncrease?.count
+					: step.kind === "subclass"
+						? subclassId !== null
+						: choicePicks[step.choice.id] !== undefined;
 
 	const handleNext = () => {
 		if (!canContinue) return;
@@ -95,9 +166,32 @@ export function LevelUpModal({
 			setStepIndex((prev) => prev + 1);
 			return;
 		}
-		if (skill === null) return;
-		onApply({ hpGain, skill, subclassId: subclassId ?? undefined });
+		onApply({
+			hpGain,
+			skill: skill ?? undefined,
+			stats,
+			subclassId: subclassId ?? undefined,
+			choicePicks,
+		});
 		reset();
+	};
+
+	// a single pick swaps on tap; multi-picks fill up to `count` and ignore
+	// further taps until one is deselected
+	const toggleStat = (id: Stat) => {
+		const count = statIncrease?.count ?? 1;
+		setStats((prev) => {
+			if (prev.includes(id)) return prev.filter((picked) => picked !== id);
+			if (count === 1) return [id];
+			return prev.length < count ? [...prev, id] : prev;
+		});
+	};
+
+	const toggleChoicePick = (choiceId: string, optionId: string) => {
+		setChoicePicks((prev) => {
+			const { [choiceId]: current, ...rest } = prev;
+			return current === optionId ? rest : { ...rest, [choiceId]: optionId };
+		});
 	};
 
 	// the first step's secondary button cancels, later ones go back a step
@@ -133,14 +227,14 @@ export function LevelUpModal({
 				<View style={styles.card}>
 					<View style={styles.header}>
 						<Text style={styles.stepLabel}>
-							Крок {stepIndex + 1} з {steps.length} · {STEP_LABELS[step]}
+							Крок {stepIndex + 1} з {steps.length} · {step.label}
 						</Text>
 						<Text style={styles.title}>
 							Рівень {character.level} → {nextLevel}
 						</Text>
 					</View>
 
-					{step === "hp" && (
+					{step.kind === "hp" && (
 						<>
 							<Text style={styles.message}>
 								Кинь кістку здоров'я (d{hitDie}) і введи, скільки HP отримує
@@ -176,7 +270,7 @@ export function LevelUpModal({
 						</>
 					)}
 
-					{step === "skills" && (
+					{step.kind === "skills" && (
 						<>
 							<Text style={styles.message}>Обери навичку, яка отримує +1.</Text>
 
@@ -223,7 +317,52 @@ export function LevelUpModal({
 						</>
 					)}
 
-					{step === "subclass" && (
+					{step.kind === "stat" && statIncrease && (
+						<>
+							<Text style={styles.message}>
+								{STAT_STEP_TEXT[statIncrease.pool].message}
+							</Text>
+
+							<View style={styles.skillListContent}>
+								{statPool.map((id) => {
+									const isSelected = stats.includes(id);
+									const value = character.stats[id];
+									return (
+										<TouchableOpacity
+											key={id}
+											style={[
+												styles.skillRow,
+												isSelected && styles.skillRowSelected,
+											]}
+											onPress={() => toggleStat(id)}
+											activeOpacity={0.75}
+											role={statIncrease.count > 1 ? "checkbox" : "radio"}
+											aria-checked={isSelected}
+											accessibilityLabel={STAT_LABELS[id]}
+										>
+											<View style={styles.skillInfo}>
+												<Text style={styles.skillName}>{id}</Text>
+												<Text style={styles.skillStat}>{STAT_LABELS[id]}</Text>
+											</View>
+											<Text style={styles.skillValue}>
+												{formatSigned(value)}
+											</Text>
+											{isSelected && (
+												<>
+													<Text style={styles.previewArrow}>→</Text>
+													<Text style={styles.skillValueNew}>
+														{formatSigned(value + 1)}
+													</Text>
+												</>
+											)}
+										</TouchableOpacity>
+									);
+								})}
+							</View>
+						</>
+					)}
+
+					{step.kind === "subclass" && (
 						<>
 							<Text style={styles.message}>
 								Обери підклас. Вибір робиться один раз.
@@ -280,6 +419,61 @@ export function LevelUpModal({
 										</TouchableOpacity>
 									);
 								})}
+							</ScrollView>
+						</>
+					)}
+
+					{step.kind === "choice" && (
+						<>
+							<Text style={styles.message}>
+								Обери: {step.choice.label.toLowerCase()}.
+							</Text>
+
+							<ScrollView
+								style={styles.skillList}
+								contentContainerStyle={styles.skillListContent}
+								showsVerticalScrollIndicator={false}
+							>
+								{step.choice.options
+									// options taken at earlier levels can't be picked again
+									.filter(
+										(option) =>
+											!character.choices?.[step.choice.id]?.includes(option.id),
+									)
+									.map((option) => {
+										const isSelected =
+											choicePicks[step.choice.id] === option.id;
+										return (
+											<TouchableOpacity
+												key={option.id}
+												style={[
+													styles.optionCard,
+													isSelected && styles.skillRowSelected,
+												]}
+												onPress={() =>
+													toggleChoicePick(step.choice.id, option.id)
+												}
+												activeOpacity={0.8}
+												role="radio"
+												aria-checked={isSelected}
+												accessibilityLabel={option.title}
+											>
+												<Text
+													style={[
+														styles.subclassFeatureTitle,
+														!isSelected && styles.optionTitleIdle,
+													]}
+												>
+													{option.title}
+												</Text>
+												{option.lines.map((line) => (
+													<Text key={line} style={styles.subclassFeatureText}>
+														{line}
+													</Text>
+												))}
+											</TouchableOpacity>
+										);
+									})}
 							</ScrollView>
 						</>
 					)}
@@ -482,6 +676,18 @@ const styles = StyleSheet.create({
 		fontFamily: FONTS.headingSemiBold,
 		fontSize: 12.5,
 		color: COLORS.accent,
+	},
+	optionCard: {
+		borderWidth: 1,
+		borderColor: COLORS.borderSoft,
+		borderRadius: RADII.lg,
+		paddingVertical: 10,
+		paddingHorizontal: 12,
+		backgroundColor: COLORS.bgElev2,
+		gap: 4,
+	},
+	optionTitleIdle: {
+		color: COLORS.text,
 	},
 	subclassFeatureText: {
 		fontFamily: FONTS.bodyRegular,

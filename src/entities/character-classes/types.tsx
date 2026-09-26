@@ -2,6 +2,11 @@ export type Stat = "STR" | "DEX" | "INT" | "WIL";
 
 export type Save = `${Stat}+` | `${Stat}–`;
 
+export interface StatIncrease {
+	pool: "key" | "secondary" | "any";
+	count: number;
+}
+
 // a spendable class resource tracked on the sheet (shapeshift charges,
 // mana…); its max is re-derived from the character on every render
 export interface ClassResource {
@@ -24,6 +29,24 @@ export interface ClassFeature {
 	lines: string[];
 	// the level the feature is gained at; level 1 when omitted
 	minLevel?: number;
+}
+
+// a pick-one-of-many granted at specific levels (e.g. Shadowmancer
+// invocations); each listed level adds one pick, never repeating an option
+export interface ClassChoice {
+	id: string;
+	// singular, for the level-up step ("Інвокація")
+	label: string;
+	// plural, for the reference section ("Інвокації")
+	sectionTitle: string;
+	levels: number[];
+	options: ClassChoiceOption[];
+}
+
+export interface ClassChoiceOption extends ClassFeature {
+	id: string;
+	// mechanical effects the sheet applies while the option is taken
+	bonuses?: { maxWounds?: number };
 }
 
 // a specialization picked once, at SUBCLASS_LEVEL; text-only for now
@@ -51,6 +74,7 @@ export interface CharacterClass {
 	startingGear: string[];
 	features: ClassFeature[];
 	subclasses?: Subclass[];
+	choices?: ClassChoice[];
 }
 
 export type CharacterClasses = CharacterClass[];
