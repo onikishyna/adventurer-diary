@@ -85,8 +85,6 @@ function Row({ label, value }: { label: string; value?: string }) {
 	);
 }
 
-// ability text is long, so unlike Row it stacks under its label at full
-// width instead of squeezing into a right-hand column (it used to overflow)
 function AbilityRow({ label, values }: { label: string; values?: string[] }) {
 	if (!values?.length) return null;
 	return (
@@ -105,7 +103,6 @@ function AbilityRow({ label, values }: { label: string; values?: string[] }) {
 }
 
 const styles = StyleSheet.create({
-	// breathing room so the last section doesn't sit flush on the footer
 	content: {
 		paddingBottom: 16,
 	},

@@ -11,11 +11,12 @@ import {
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { originIcons, originImages } from "@/entities/ancestry";
+import { originIcons, portraitImages } from "@/entities/ancestry";
 import { BOON_TIERS } from "@/entities/boon";
 import type { Character, CharacterNote } from "@/entities/character/types";
 import {
 	ClassFeatures,
+	classIcons,
 	heroes,
 	type Save,
 	type Stat,
@@ -40,6 +41,7 @@ import {
 	LevelUpModal,
 	type LevelUpResult,
 } from "@/features/characters/components/level-up-modal";
+import { PortraitPickerModal } from "@/features/characters/components/portrait-picker-modal";
 import { QuantityStepper } from "@/features/characters/components/quantity-stepper";
 import { useCharacters } from "@/features/characters/use-characters-context";
 import { SpellPickerModal } from "@/features/spells/components/spell-picker-modal";
@@ -72,7 +74,6 @@ const STATS = [
 
 const MAX_WOUNDS = 5;
 
-// before racial bonuses (e.g. Dwarf −1)
 const BASE_SPEED = 6;
 
 const formatSigned = (value: number) => (value >= 0 ? `+${value}` : `${value}`);
@@ -90,7 +91,6 @@ interface EditableStatCardProps {
 	label: string;
 	value: number;
 	onChangeValue: (next: number | null) => void;
-	// modifiers read as "+2"; absolute values like speed read as a plain "6"
 	signed?: boolean;
 }
 
@@ -346,9 +346,6 @@ interface NoteInputProps {
 	placeholder?: string;
 }
 
-// multiline inputs don't resize to their content on web (and never shrink
-// back), so an invisible Text with the same content sizes the box and the
-// input is stretched over it
 function NoteInput({
 	value,
 	onChangeText,
@@ -358,7 +355,6 @@ function NoteInput({
 	return (
 		<View style={styles.noteInputWrap}>
 			<Text style={[styles.abilityText, styles.noteSizer]} aria-hidden>
-				{/* trailing space keeps a final empty line from collapsing */}
 				{`${value || placeholder || ""} `}
 			</Text>
 			<TextInput
@@ -381,8 +377,6 @@ interface NoteCardProps {
 	onDelete: () => void;
 }
 
-// edits stay local while typing and are committed on blur, so every
-// keystroke doesn't round-trip through the context + AsyncStorage
 function NoteCard({ note, onChangeText, onDelete }: NoteCardProps) {
 	const [draft, setDraft] = useState(note.text);
 
@@ -452,6 +446,12 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 	const [settingsAnchor, setSettingsAnchor] = useState<MenuAnchor | null>(null);
 	const [levelUpVisible, setLevelUpVisible] = useState(false);
 	const [boonsVisible, setBoonsVisible] = useState(false);
+	const [portraitPickerVisible, setPortraitPickerVisible] = useState(false);
+	const ClassIcon = classIcons[character.characterClass.id];
+	const portraitId =
+		character.portrait && character.portrait in portraitImages
+			? character.portrait
+			: character.origin.id;
 	const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
 	const [spellPickerVisible, setSpellPickerVisible] = useState(false);
 	const [itemModalVisible, setItemModalVisible] = useState(false);
@@ -461,8 +461,6 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 		character.spells?.includes(spell.id),
 	);
 
-	// grouped by tier for the reference tab, each in the order the GM
-	// granted them, like level-up choices
 	const takenBoonTiers = BOON_TIERS.map((tier) => ({
 		tier,
 		boons: (character.boons ?? [])
@@ -470,9 +468,6 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 			.filter((boon) => boon !== undefined),
 	})).filter(({ boons }) => boons.length > 0);
 
-	// HP is stored, not derived, so a boon's HP bonus (Experienced, Veteran)
-	// is added to max and current HP when it's granted and taken back when
-	// it's removed
 	const handleToggleBoon = (boonId: string) => {
 		updateCharacter(character.id, (current) => {
 			const existing = current.boons ?? [];
@@ -510,8 +505,6 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 		});
 	};
 
-	// the rolled HP raises both the max and the current pool, so a
-	// character doesn't end the level-up looking "damaged"
 	const handleApplyLevelUp = ({
 		hpGain,
 		skill,
@@ -520,8 +513,6 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 		choicePicks,
 	}: LevelUpResult) => {
 		updateCharacter(character.id, (current) => {
-			// characters created before skills existed have none stored — seed
-			// every skill from its governing stat, as creation does
 			const skills = {
 				...(current.skills ??
 					(Object.fromEntries(
@@ -532,8 +523,6 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 					) as Record<Skill, number>)),
 			};
 			if (skill) skills[skill] += 1;
-			// skills are stored as stat + points, so a raised stat carries
-			// over to every skill it governs
 			const stats = { ...current.stats };
 			for (const stat of raisedStats) {
 				stats[stat] += 1;
@@ -558,8 +547,6 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 		setLevelUpVisible(false);
 	};
 
-	// leave the sheet first — once the character is gone this screen has
-	// nothing to render
 	const handleConfirmDelete = () => {
 		setDeleteConfirmVisible(false);
 		onClose();
@@ -638,16 +625,12 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 		}));
 	};
 
-	// the class is snapshotted onto the character at creation, so rules
-	// added later (Zephyr's STR + DEX defense, class resources, level-up
-	// choices) are read from the static data
 	const classRules = heroes.find(
 		(hero) => hero.id === character.characterClass.id,
 	);
 	const subclass = classRules?.subclasses?.find(
 		(option) => option.id === character.subclassId,
 	);
-	// options picked on level-ups (e.g. invocations), in the order taken
 	const takenChoices = (classRules?.choices ?? [])
 		.map((choice) => ({
 			choice,
@@ -658,12 +641,8 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 				.filter((option) => option !== undefined),
 		}))
 		.filter(({ options }) => options.length > 0);
-	// level-up picks and boons whose flat bonuses feed the derived values
-	// below (Mighty Endurance, Battle Hardened, Epic Mind…)
 	const bonusSources = getBonusSources(character);
 
-	// racial (Dwarf +1) and chosen-ability (Mighty Endurance +4) bonuses —
-	// derived every render rather than stored on the character
 	const maxWounds =
 		MAX_WOUNDS +
 		(character.origin.bonuses?.maxWounds ?? 0) +
@@ -698,8 +677,6 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 	const resources = (classRules?.resources ?? [])
 		.filter((resource) => character.level >= (resource.minLevel ?? 1))
 		.map((resource) => {
-			// boons only ever touch mana (Bright, Epic Mind, Smart, Not Book
-			// Smart's −KEY, where KEY is the class's primary key stat)
 			const boonBonus =
 				resource.id === "mana"
 					? sumBonus(bonusSources, "mana") +
@@ -709,7 +686,6 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 			return {
 				...resource,
 				max,
-				// clamped on read, in case the max dropped below the spent count
 				used: Math.min(character.usedResources?.[resource.id] ?? 0, max),
 			};
 		});
@@ -737,7 +713,6 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 	};
 
 	// racial bonus (e.g. Dragonborn +1 defense) folds into the reactive
-	// default on top of the class's own formula (Zephyr: (DEX+STR), ×2 at 13)
 	const defenseDefault =
 		(classRules?.defense?.(character) ?? dexMod) +
 		(character.origin.bonuses?.defense ?? 0) +
@@ -745,16 +720,12 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 	const defense = character.defense ?? defenseDefault;
 	const initiative =
 		character.initiative ?? dexMod + sumBonus(bonusSources, "initiative");
-	// racial (Dwarf −1), class (Zephyr +2 from level 2) and boon bonuses form
-	// the reactive default; a hand-entered value overrides it, like defense
 	const speedDefault =
 		BASE_SPEED +
 		(character.origin.bonuses?.speed ?? 0) +
 		(classRules?.speedBonus?.(character) ?? 0) +
 		sumBonus(bonusSources, "speed");
 	const speed = character.speed ?? speedDefault;
-	// background (e.g. Виживальник +1) and boon bonuses — the hit die *size*
-	// still comes from the class, only the *count* (normally = level) grows
 	const hitDiceCount =
 		character.level +
 		(character.background.bonuses?.hitDiceBonus ?? 0) +
@@ -803,16 +774,26 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 				showsVerticalScrollIndicator={false}
 				contentContainerStyle={styles.scrollContent}
 			>
-				{/* HP & co. only on the first tab — the others need the room */}
 				{activeTab === "stats" && (
 					<View style={styles.summaryCard}>
 						<View style={styles.summaryHeader}>
 							<Image
-								source={originImages[character.origin.id]}
+								source={portraitImages[portraitId]}
 								style={styles.avatar}
 							/>
 							<View style={styles.summaryText}>
-								<Text style={styles.name}>{character.name}</Text>
+								<View style={styles.nameRow}>
+									<Text style={styles.name}>{character.name}</Text>
+									{ClassIcon && (
+										<View style={styles.classBadge}>
+											<ClassIcon
+												size={14}
+												color={COLORS.accent}
+												strokeWidth={1.6}
+											/>
+										</View>
+									)}
+								</View>
 								<Text style={styles.meta}>
 									{character.origin.origin} ·{" "}
 									{character.characterClass.background} · Рівень{" "}
@@ -1205,10 +1186,22 @@ export const CharacterSheet = ({ character, onClose }: Props) => {
 					setSettingsAnchor(null);
 					setBoonsVisible(true);
 				}}
+				onChangePortrait={() => {
+					setSettingsAnchor(null);
+					setPortraitPickerVisible(true);
+				}}
 				onDelete={() => {
 					setSettingsAnchor(null);
 					setDeleteConfirmVisible(true);
 				}}
+			/>
+
+			<PortraitPickerModal
+				visible={portraitPickerVisible}
+				selectedId={portraitId}
+				originId={character.origin.id}
+				onSelect={(portrait) => updateCharacter(character.id, { portrait })}
+				onClose={() => setPortraitPickerVisible(false)}
 			/>
 
 			<BoonsModal
@@ -1313,6 +1306,22 @@ const styles = StyleSheet.create({
 		borderRadius: 29,
 		borderWidth: 2,
 		borderColor: COLORS.accent,
+	},
+	nameRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+	},
+	classBadge: {
+		width: 24,
+		height: 24,
+		borderRadius: 12,
+		borderWidth: 1,
+		borderColor: COLORS.accentSoft35,
+		backgroundColor: COLORS.accentSoft10,
+		alignItems: "center",
+		justifyContent: "center",
+		flexShrink: 0,
 	},
 	summaryText: {
 		flex: 1,
@@ -1590,7 +1599,6 @@ const styles = StyleSheet.create({
 		borderTopWidth: 1,
 		borderTopColor: COLORS.borderSoft,
 	},
-	// wrapped in its own View, so it doesn't get the section's gap
 	choiceTitle: {
 		marginBottom: 10,
 	},

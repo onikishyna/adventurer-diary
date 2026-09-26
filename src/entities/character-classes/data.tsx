@@ -1,14 +1,9 @@
 import type { CharacterClasses, ClassFeature, StatIncrease } from "./types";
 
-// the level at which every class picks one of its subclasses
 export const SUBCLASS_LEVEL = 3;
 
-// levels whose level-up grants one skill point
 export const SKILL_POINT_LEVELS = [2, 3];
 
-// levels whose level-up grants +1 to stats: `pool` is which stats can be
-// picked ("key" = the class's key stats, "secondary" = the other two,
-// "any" = all four), `count` how many different ones get +1
 export const STAT_INCREASES: Record<number, StatIncrease> = {
 	4: { pool: "key", count: 1 },
 	5: { pool: "secondary", count: 1 },
@@ -21,7 +16,6 @@ export const STAT_INCREASES: Record<number, StatIncrease> = {
 	20: { pool: "any", count: 2 },
 };
 
-// features every class gets, appended after its own
 const COMMON_FEATURES: ClassFeature[] = [
 	{
 		title: "EPIC BOON",
@@ -51,7 +45,6 @@ export const heroes: CharacterClasses = [
 					"Fury Dice рахуються як кубики шкоди проти броні монстрів.",
 				],
 			},
-			// replaces the block above from level 5 (RAGE (2))
 			{
 				title: "RAGE (дія, 1/хід)",
 				minLevel: 5,
@@ -62,7 +55,6 @@ export const heroes: CharacterClasses = [
 					"Fury Dice рахуються як кубики шкоди проти броні монстрів.",
 				],
 			},
-			// from level 6 Fury Dice are d6 (INTENSIFYING FURY (2))
 			{
 				title: "RAGE (дія, 1/хід)",
 				minLevel: 6,
@@ -73,7 +65,6 @@ export const heroes: CharacterClasses = [
 					"Fury Dice рахуються як кубики шкоди проти броні монстрів.",
 				],
 			},
-			// from level 9 Fury Dice are d8
 			{
 				title: "RAGE (дія, 1/хід)",
 				minLevel: 9,
@@ -84,7 +75,6 @@ export const heroes: CharacterClasses = [
 					"Fury Dice рахуються як кубики шкоди проти броні монстрів.",
 				],
 			},
-			// from level 13 Fury Dice are d10
 			{
 				title: "RAGE (дія, 1/хід)",
 				minLevel: 13,
@@ -95,7 +85,6 @@ export const heroes: CharacterClasses = [
 					"Fury Dice рахуються як кубики шкоди проти броні монстрів.",
 				],
 			},
-			// from level 17 Fury Dice are d12
 			{
 				title: "RAGE (дія, 1/хід)",
 				minLevel: 17,
@@ -121,7 +110,6 @@ export const heroes: CharacterClasses = [
 					"Разом із Rage зникають усі Fury Dice.",
 				],
 			},
-			// from level 18 DEEP RAGE drops the 0 HP condition
 			{
 				title: "RAGE ЗАКІНЧУЄТЬСЯ, якщо:",
 				minLevel: 18,
@@ -682,8 +670,6 @@ export const heroes: CharacterClasses = [
 			{
 				id: "shapeshift",
 				label: "Заряди перетворення",
-				// +1 charge at each of levels 6, 9 and 12; Fang & Claw gets
-				// +2 more from level 15 (MASTER OF FORMS (2))
 				max: ({ stats, level, subclassId }) =>
 					stats.DEX +
 					[6, 9, 12].filter((bonusLevel) => level >= bonusLevel).length +
@@ -884,8 +870,6 @@ export const heroes: CharacterClasses = [
 						maxLevel: 14,
 						lines: ["Твої форми можуть мати 2 Chimeric Boons одночасно."],
 					},
-					// replaces the block above; its +2 Beastshift charges and 2 extra
-					// Chimeric Boons are applied by the counter and the level-up
 					{
 						title: "MASTER OF FORMS (2)",
 						minLevel: 15,
@@ -910,7 +894,6 @@ export const heroes: CharacterClasses = [
 				sectionTitle: "Chimeric Boons",
 				levels: [6, 9, 12, 17],
 				countAt: { 6: 2 },
-				// MASTER OF FORMS (2)
 				subclassCountAt: { "fang-claw": { 15: 2 } },
 				options: [
 					{
@@ -986,10 +969,8 @@ export const heroes: CharacterClasses = [
 		startingHP: 13,
 		saves: ["DEX+", "INT–"],
 		armor: "None",
-		// IRON DEFENSE: unarmored Armor = DEX+STR, doubled from level 13
 		defense: ({ stats, level }) =>
 			(stats.DEX + stats.STR) * (level >= 13 ? 2 : 1),
-		// unarmored movement: +2 from level 2, +4 from level 9
 		speedBonus: ({ level }) => (level >= 9 ? 4 : level >= 2 ? 2 : 0),
 		resources: [
 			{
@@ -998,7 +979,6 @@ export const heroes: CharacterClasses = [
 				code: "BURST",
 				display: "field",
 				minLevel: 2,
-				// +1 from level 20 (WINDBORNE)
 				max: ({ stats, level }) => stats.DEX + (level >= 20 ? 1 : 0),
 			},
 		],
@@ -1032,7 +1012,6 @@ export const heroes: CharacterClasses = [
 					"Ігноруй перший Wound, який ти отримав би в кожному бою. Здібності, що спрацьовують від Wound (наприклад, Kinetic Momentum), усе одно спрацьовують.",
 				],
 			},
-			// replaces the block above from level 10
 			{
 				title: "UNYIELDING RESOLVE (2)",
 				minLevel: 10,
@@ -1041,7 +1020,6 @@ export const heroes: CharacterClasses = [
 					"Ігноруй перші 2 Wounds, які ти отримав би в кожному бою. Здібності, що спрацьовують від Wound (наприклад, Kinetic Momentum), усе одно спрацьовують.",
 				],
 			},
-			// replaces the block above from level 17
 			{
 				title: "UNYIELDING RESOLVE (3)",
 				minLevel: 17,
@@ -1071,7 +1049,6 @@ export const heroes: CharacterClasses = [
 					"Дія: зроби удар без зброї по союзнику, щоб передати йому частину своєї сили замість шкоди. Витрать будь-яку кількість своїх Hit Dice і вилікуй його так, як лікуєш себе під час Field Rest (кидаєш кубики й додаєш свій STR до кожного).",
 				],
 			},
-			// its +1 Burst of Speed is applied by the BURST counter
 			{
 				title: "WINDBORNE",
 				minLevel: 20,

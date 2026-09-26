@@ -6,9 +6,6 @@ export interface BoonTier {
 	boons: ClassChoiceOption[];
 }
 
-// GM-granted boons (Nimble GM Guide), added and removed freely from the
-// sheet's settings menu; text-only, like class features. Titles keep the
-// original English name in brackets to match the book
 export const BOON_TIERS: BoonTier[] = [
 	{
 		id: "minor",

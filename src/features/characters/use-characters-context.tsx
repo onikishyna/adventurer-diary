@@ -34,8 +34,6 @@ export const CharacterProvider = ({ children }: { children: ReactNode }) => {
 			.finally(() => setIsLoaded(true));
 	}, []);
 
-	// don't save until the initial load is done — otherwise the empty
-	// initial state can be written first and wipe the stored characters
 	useEffect(() => {
 		if (!isLoaded) return;
 		AsyncStorage.setItem("characters", JSON.stringify(characters));

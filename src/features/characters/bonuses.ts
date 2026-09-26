@@ -13,15 +13,11 @@ const ALL_BOONS = BOON_TIERS.flatMap((tier) => tier.boons);
 export const findBoon = (boonId: string) =>
 	ALL_BOONS.find((boon) => boon.id === boonId);
 
-// the class is snapshotted onto the character at creation, so rules added
-// later are read from the static data by id
 export const getClassRules = (
 	character: Character,
 ): CharacterClass | undefined =>
 	heroes.find((hero) => hero.id === character.characterClass.id);
 
-// everything the character has taken that can carry flat bonuses: level-up
-// choice options (e.g. Mighty Endurance) and GM-granted boons
 export function getBonusSources(character: Character): ClassChoiceOption[] {
 	const classRules = getClassRules(character);
 	const choiceOptions = (classRules?.choices ?? []).flatMap((choice) =>

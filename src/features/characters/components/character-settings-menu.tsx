@@ -11,12 +11,12 @@ import { COLORS, FONTS, RADII } from "@/shared/theme";
 import {
 	CloseIcon,
 	type IconProps,
+	PersonIcon,
 	PlusIcon,
 	SparkleIcon,
 } from "@/shared/ui/icons";
 
 export interface MenuAnchor {
-	// window coordinates of the button the menu drops down from
 	top: number;
 	right: number;
 }
@@ -26,6 +26,7 @@ interface Props {
 	onClose: () => void;
 	onLevelUp: () => void;
 	onBoons: () => void;
+	onChangePortrait: () => void;
 	onDelete: () => void;
 }
 
@@ -53,14 +54,12 @@ function MenuItem({ label, icon: Icon, destructive, onPress }: MenuItemProps) {
 	);
 }
 
-// dropdown under the sheet's top-right settings icon; the modal covers the
-// whole window (stack header included), so it's positioned from the
-// button's measured window coordinates rather than a fixed offset
 export function CharacterSettingsMenu({
 	anchor,
 	onClose,
 	onLevelUp,
 	onBoons,
+	onChangePortrait,
 	onDelete,
 }: Props) {
 	return (
@@ -79,6 +78,11 @@ export function CharacterSettingsMenu({
 				>
 					<MenuItem label="Левел ап" icon={PlusIcon} onPress={onLevelUp} />
 					<MenuItem label="Boons" icon={SparkleIcon} onPress={onBoons} />
+					<MenuItem
+						label="Портрет"
+						icon={PersonIcon}
+						onPress={onChangePortrait}
+					/>
 					<View style={styles.divider} />
 					<MenuItem
 						label="Видалити персонажа"

@@ -6,6 +6,7 @@ import type { Skill } from "@/entities/skill";
 export interface Character {
 	id: string;
 	name: string;
+	portrait?: string;
 
 	origin: Origin;
 	background: Background;
@@ -15,7 +16,6 @@ export interface Character {
 	currentHP: number;
 	maxHP: number;
 	wounds?: number;
-	// temporary HP: the current pool and the amount last granted (its max)
 	tempHP?: number;
 	tempHPMax?: number;
 
@@ -27,15 +27,10 @@ export interface Character {
 	spells?: string[];
 	inventory?: InventoryItem[];
 	notes?: CharacterNote[];
-	// Subclass.id chosen on reaching SUBCLASS_LEVEL
 	subclassId?: string;
-	// picked option ids per ClassChoice.id, in the order they were taken
 	choices?: Record<string, string[]>;
-	// boon ids (any BOON_TIERS tier) granted by the GM, in the order added
 	boons?: string[];
-	// spent amount per class resource, keyed by ClassResource.id
 	usedResources?: Record<string, number>;
-	// hand-entered values of "field" resources; null/absent = the max
 	resourceValues?: Record<string, number | null>;
 }
 

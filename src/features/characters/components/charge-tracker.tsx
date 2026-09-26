@@ -8,9 +8,6 @@ interface ChargeTrackerProps {
 	onChangeUsed: (next: number) => void;
 }
 
-// a row of pips: tapping an empty pip spends a charge, tapping a filled one
-// gives it back. Spent pips always fill from the left, so the row reads as a
-// count rather than a set of independent toggles
 export function ChargeTracker({
 	title,
 	max,

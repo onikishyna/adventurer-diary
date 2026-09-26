@@ -4,12 +4,9 @@ import type { ClassFeature } from "./types";
 
 interface ClassFeaturesProps {
 	features: ClassFeature[];
-	// only features gained at or below this level are shown
 	level: number;
 }
 
-// class rules as a stack of cards, styled like the race ability card on the
-// sheet; shared by the sheet's reference tab and the class creation step
 export function ClassFeatures({ features, level }: ClassFeaturesProps) {
 	const unlocked = features.filter(
 		(feature) =>

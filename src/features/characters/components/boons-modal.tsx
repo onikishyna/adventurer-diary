@@ -17,9 +17,6 @@ interface BoonsModalProps {
 	onClose: () => void;
 }
 
-// GM-granted boons, grouped Minor / Major / EPIC: each card toggles on tap
-// and is saved right away, so a mistaken tap is undone by tapping again —
-// no confirm step
 export function BoonsModal({
 	visible,
 	selectedIds,

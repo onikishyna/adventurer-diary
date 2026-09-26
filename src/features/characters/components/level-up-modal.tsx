@@ -23,13 +23,9 @@ import { COLORS, FONTS, RADII } from "@/shared/theme";
 
 export interface LevelUpResult {
 	hpGain: number;
-	// the skill that receives this level's skill point (SKILL_POINT_LEVELS)
 	skill?: Skill;
-	// stats raised by 1 each (STAT_INCREASES); empty on other levels
 	stats: Stat[];
-	// set only on the level-up that reaches SUBCLASS_LEVEL
 	subclassId?: string;
-	// option picked this level per ClassChoice.id (e.g. an invocation)
 	choicePicks: Record<string, string[]>;
 }
 
@@ -66,8 +62,6 @@ interface LevelUpModalProps {
 	onApply: (result: LevelUpResult) => void;
 }
 
-// the level-up flow is a sequence of steps, rendered by kind below; the
-// common ones run every level, level-specific ones are appended per level
 type Step =
 	| { kind: "hp"; label: string }
 	| { kind: "skills"; label: string }
@@ -98,14 +92,10 @@ export function LevelUpModal({
 	};
 
 	const nextLevel = character.level + 1;
-	// read from the static data — the class stored on the character is a
-	// snapshot from creation and may predate subclasses and choices
 	const classRules = heroes.find(
 		(hero) => hero.id === character.characterClass.id,
 	);
 	const subclasses = classRules?.subclasses ?? [];
-	// the class's regular picks this level plus any extra ones its subclass
-	// grants (e.g. Fang & Claw's 2 Chimeric Boons at 15)
 	const pickCount = (choice: ClassChoice) =>
 		(choice.levels.includes(nextLevel)
 			? (choice.countAt?.[nextLevel] ?? 1)
@@ -151,7 +141,6 @@ export function LevelUpModal({
 		onClose();
 	};
 
-	// players roll the hit die themselves, so the gain is entered by hand
 	const hpGain = Number.parseInt(hpText.trim(), 10);
 	const isValidHpGain = /^\d+$/.test(hpText.trim()) && hpGain > 0;
 
@@ -185,8 +174,6 @@ export function LevelUpModal({
 		reset();
 	};
 
-	// a single pick swaps on tap; multi-picks fill up to `count` and ignore
-	// further taps until one is deselected
 	const toggleStat = (id: Stat) => {
 		const count = statIncrease?.count ?? 1;
 		setStats((prev) => {
@@ -196,8 +183,6 @@ export function LevelUpModal({
 		});
 	};
 
-	// same rules as stats: a single pick swaps on tap, multi-picks fill up
-	// to the level's count
 	const toggleChoicePick = (choice: ClassChoice, optionId: string) => {
 		const count = pickCount(choice);
 		setChoicePicks((prev) => {
@@ -213,7 +198,6 @@ export function LevelUpModal({
 		});
 	};
 
-	// the first step's secondary button cancels, later ones go back a step
 	const handleSecondary = () => {
 		if (stepIndex === 0) {
 			handleClose();
@@ -222,9 +206,6 @@ export function LevelUpModal({
 		}
 	};
 
-	// same displayed value as the sheet: stored skill (falls back to the
-	// governing stat for characters created before skills existed) plus
-	// the background's and boons' flat bonuses
 	const bonusSources = getBonusSources(character);
 	const skillValue = (id: Skill, stat: keyof Character["stats"]) => {
 		const backgroundBonus =
@@ -426,8 +407,6 @@ export function LevelUpModal({
 												{subclass.tagline}
 											</Text>
 											{subclass.features.map((feature) => {
-												// features gained later are previewed, dimmed and
-												// tagged with their level, to help pick a subclass
 												const isFuture = (feature.minLevel ?? 1) > nextLevel;
 												return (
 													<View
@@ -479,7 +458,6 @@ export function LevelUpModal({
 								showsVerticalScrollIndicator={false}
 							>
 								{step.choice.options
-									// options taken at earlier levels can't be picked again
 									.filter(
 										(option) =>
 											!character.choices?.[step.choice.id]?.includes(option.id),

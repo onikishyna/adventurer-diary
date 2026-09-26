@@ -109,7 +109,6 @@ export const StepClass = ({ value, onChange }: StepClassProps) => {
 			{value && (
 				<View style={styles.featuresBlock}>
 					<Text style={styles.label}>Здібності класу</Text>
-					{/* characters are created at level 1 */}
 					<ClassFeatures features={value.features} level={1} />
 				</View>
 			)}
