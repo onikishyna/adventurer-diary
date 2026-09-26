@@ -9,7 +9,10 @@ interface Props {
 
 export const StepSummary = ({ draft }: Props) => {
 	return (
-		<ScrollView showsVerticalScrollIndicator={false}>
+		<ScrollView
+			showsVerticalScrollIndicator={false}
+			contentContainerStyle={styles.content}
+		>
 			<Text style={styles.characterName}>{draft.name || "—"}</Text>
 			<View style={styles.divider} />
 
@@ -82,26 +85,30 @@ function Row({ label, value }: { label: string; value?: string }) {
 	);
 }
 
+// ability text is long, so unlike Row it stacks under its label at full
+// width instead of squeezing into a right-hand column (it used to overflow)
 function AbilityRow({ label, values }: { label: string; values?: string[] }) {
 	if (!values?.length) return null;
 	return (
-		<View style={styles.row}>
+		<View style={styles.abilityBlock}>
 			<Text style={styles.rowLabel}>{label}</Text>
-			<View style={styles.abilityList}>
-				{values.map((item, index) => (
-					<Text
-						key={item}
-						style={index === 0 ? styles.abilityFirst : styles.abilityItem}
-					>
-						{item}
-					</Text>
-				))}
-			</View>
+			{values.map((item, index) => (
+				<Text
+					key={item}
+					style={index === 0 ? styles.abilityFirst : styles.abilityItem}
+				>
+					{index === 0 ? item : `· ${item}`}
+				</Text>
+			))}
 		</View>
 	);
 }
 
 const styles = StyleSheet.create({
+	// breathing room so the last section doesn't sit flush on the footer
+	content: {
+		paddingBottom: 16,
+	},
 	characterName: {
 		fontFamily: FONTS.headingSemiBold,
 		fontSize: 26,
@@ -130,11 +137,14 @@ const styles = StyleSheet.create({
 	row: {
 		flexDirection: "row",
 		justifyContent: "space-between",
+		alignItems: "flex-start",
+		gap: 16,
 		paddingVertical: 6,
 		borderBottomWidth: 0.5,
 		borderBottomColor: COLORS.borderSoft,
 	},
 	rowLabel: {
+		flexShrink: 1,
 		fontFamily: FONTS.bodyRegular,
 		fontSize: 14,
 		color: COLORS.textMuted,
@@ -145,7 +155,6 @@ const styles = StyleSheet.create({
 		color: COLORS.text,
 		flexShrink: 1,
 		textAlign: "right",
-		marginLeft: 16,
 	},
 
 	description: {
@@ -161,20 +170,22 @@ const styles = StyleSheet.create({
 		color: COLORS.text,
 		paddingVertical: 4,
 	},
-	abilityList: {
-		alignItems: "flex-end",
+	abilityBlock: {
+		paddingVertical: 6,
+		borderBottomWidth: 0.5,
+		borderBottomColor: COLORS.borderSoft,
+		gap: 2,
 	},
 	abilityFirst: {
 		fontFamily: FONTS.bodyMedium,
 		fontSize: 14,
 		color: COLORS.text,
-		textAlign: "right",
-		marginBottom: 2,
+		marginTop: 4,
 	},
 	abilityItem: {
 		fontFamily: FONTS.bodyRegular,
 		fontSize: 13,
 		color: COLORS.textMuted,
-		textAlign: "right",
+		lineHeight: 19,
 	},
 });
