@@ -6,12 +6,12 @@
 		"orientation": "portrait",
 		"scheme": "adventurerdiary",
 		"userInterfaceStyle": "automatic",
-		"ios": {
-			"icon": "./assets/expo.icon"
-		},
+		"icon": "./assets/images/icon.png",
 		"android": {
 			"adaptiveIcon": {
-				"backgroundColor": "#E6F4FE"
+				"foregroundImage": "./assets/images/adaptive-icon.png",
+				"monochromeImage": "./assets/images/adaptive-icon-monochrome.png",
+				"backgroundColor": "#C9A961"
 			},
 			"predictiveBackGestureEnabled": false
 		},
@@ -24,11 +24,9 @@
 			[
 				"expo-splash-screen",
 				{
-					"backgroundColor": "#208AEF",
-					"android": {
-						"image": "./assets/images/splash-icon.png",
-						"imageWidth": 76
-					}
+					"image": "./assets/images/splash-icon.png",
+					"imageWidth": 200,
+					"backgroundColor": "#150A06"
 				}
 			],
 			"expo-font",
