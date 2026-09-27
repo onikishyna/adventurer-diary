@@ -40,7 +40,7 @@ export default function RootLayout() {
 
 	return (
 		<CharacterProvider>
-			<Stack />
+			<Stack screenOptions={{ headerShown: false }} />
 		</CharacterProvider>
 	);
 }
