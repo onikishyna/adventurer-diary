@@ -1,56 +1,83 @@
-# Welcome to your Expo app 👋
+# Nimble Sheet
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Лист персонажа для настільної рольової гри Nimble: створення героя, характеристики, заклинання, інвентар, левел ап з 1 по 20 рівень, буни й нотатки. Зроблено на [Expo](https://expo.dev) (React Native).
 
-## Get started
+## Запуск у режимі розробки
 
-1. Install dependencies
+1. Встанови залежності:
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. Запусти дев-сервер:
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+3. Відкрий застосунок:
+   - **на телефоні** — у [Expo Go](https://expo.dev/go) відскануй QR-код із терміналу (версія Expo Go має відповідати SDK проєкту — зараз 57);
+   - **у браузері** — натисни `w` у терміналі або запусти `npm run web`.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Збірка APK для Android
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Застосунок збирається на серверах Expo ([EAS Build](https://docs.expo.dev/build/introduction/)) — Android Studio на комп'ютері не потрібна. Потрібен безкоштовний акаунт на [expo.dev](https://expo.dev).
 
-## Get a fresh project
+### Перший раз
 
-When you're ready, run:
+1. Встанови інструмент для збірок:
+
+   ```bash
+   npm install -g eas-cli
+   ```
+
+2. Увійди у свій акаунт Expo:
+
+   ```bash
+   eas login
+   ```
+
+Проєкт уже прив'язаний до EAS (`projectId` і `owner` в `app.json`), тож `eas init` вдруге запускати не треба.
+
+### Збірка
 
 ```bash
-npm run reset-project
+npm run build:apk
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Збірка триває 10–20 хвилин. Наприкінці буде посилання й QR-код: відкрий його на телефоні, завантаж `.apk` і встанови (Android попросить дозволити встановлення з цього джерела).
 
-### Other setup steps
+Посилання на всі збірки також є на сторінці проєкту на expo.dev у розділі **Builds**.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+### Оновлення
 
-## Learn more
+Щоб оновити застосунок на телефоні, збери новий `.apk` тією ж командою і встанови його поверх старого — персонажі збережуться.
 
-To learn more about developing your project with Expo, look at the following resources:
+### Важливо
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- **Ідентифікатор застосунку** (`com.wizardfrog.adventurerdiary` в `app.json`) не можна міняти: Android вважатиме це іншим застосунком, і встановлена версія не оновиться.
+- **Ключ підпису** зберігається в акаунті Expo. Якщо його втратити, нову версію не вийде встановити поверх старої — лише видалити стару разом із персонажами.
+- **Дані не переносяться між версіями.** Персонажі з Expo Go, браузера і встановленого `.apk` зберігаються окремо на кожному пристрої й у кожному застосунку.
 
-## Join the community
+## Профілі збірки
 
-Join our community of developers creating universal apps.
+Налаштування в `eas.json`:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+| Профіль | Команда | Результат |
+|---|---|---|
+| `preview` | `npm run build:apk` | `.apk` для встановлення напряму |
+| `production` | `eas build -p android --profile production` | `.aab` для Google Play (номер версії збільшується автоматично) |
+
+## iPhone
+
+Встановити застосунок на iPhone без магазину можна лише з платним [Apple Developer](https://developer.apple.com/programs/) акаунтом ($99/рік), через TestFlight. Безкоштовна альтернатива — веб-версія на домашньому екрані (ще не налаштована).
+
+## Корисні команди
+
+| Команда | Що робить |
+|---|---|
+| `npm run lint:fix` | перевіряє й виправляє код ([Biome](https://biomejs.dev)) |
+| `npm run format` | форматує код |
+| `npx tsc --noEmit` | перевіряє типи TypeScript |
+| `npx expo-doctor` | перевіряє налаштування проєкту Expo |
