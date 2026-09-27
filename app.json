@@ -13,7 +13,8 @@
 				"monochromeImage": "./assets/images/adaptive-icon-monochrome.png",
 				"backgroundColor": "#C9A961"
 			},
-			"predictiveBackGestureEnabled": false
+			"predictiveBackGestureEnabled": false,
+			"package": "com.wizardfrog.adventurerdiary"
 		},
 		"web": {
 			"output": "static",
