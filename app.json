@@ -37,6 +37,13 @@
 		"experiments": {
 			"typedRoutes": true,
 			"reactCompiler": true
-		}
+		},
+		"extra": {
+			"router": {},
+			"eas": {
+				"projectId": "3536594d-ecf0-4c9d-a5fa-a4746fd18138"
+			}
+		},
+		"owner": "wizard-frog"
 	}
 }
