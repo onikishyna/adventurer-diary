@@ -16,6 +16,10 @@ interface CharacterContextType {
 		id: string,
 		patch: Partial<Character> | ((character: Character) => Partial<Character>),
 	) => void;
+	importCharacters: (imported: Character[]) => {
+		added: number;
+		updated: number;
+	};
 }
 
 const CharacterContext = createContext<CharacterContextType | null>(null);
@@ -61,9 +65,36 @@ export const CharacterProvider = ({ children }: { children: ReactNode }) => {
 		);
 	};
 
+	const importCharacters = (imported: Character[]) => {
+		const existingIds = new Set(characters.map((character) => character.id));
+		const updated = imported.filter((character) =>
+			existingIds.has(character.id),
+		).length;
+		setCharacters((prev) => {
+			const importedById = new Map(
+				imported.map((character) => [character.id, character]),
+			);
+			const merged = prev.map(
+				(character) => importedById.get(character.id) ?? character,
+			);
+			const prevIds = new Set(prev.map((character) => character.id));
+			return [
+				...merged,
+				...imported.filter((character) => !prevIds.has(character.id)),
+			];
+		});
+		return { added: imported.length - updated, updated };
+	};
+
 	return (
 		<CharacterContext.Provider
-			value={{ characters, addCharacter, deleteCharacter, updateCharacter }}
+			value={{
+				characters,
+				addCharacter,
+				deleteCharacter,
+				updateCharacter,
+				importCharacters,
+			}}
 		>
 			{children}
 		</CharacterContext.Provider>

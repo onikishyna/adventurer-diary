@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { originIcons } from "@/entities/ancestry";
 import type { Character } from "@/entities/character/types";
 import { DEFAULT_SKILLS } from "@/entities/skill";
+import { BackupModal } from "@/features/characters/components/backup-modal";
 import { useCharacters } from "@/features/characters/use-characters-context";
 import { CreateCharacterModal } from "@/features/create-character/components/create-character-modal";
 import type { CharacterDraft } from "@/features/create-character/types";
@@ -22,6 +23,7 @@ import {
 	MapIcon,
 	PersonIcon,
 	PlusIcon,
+	QuestBookIcon,
 	ShieldIcon,
 	ShieldStarIcon,
 } from "@/shared/ui/icons";
@@ -31,6 +33,7 @@ type HomeTab = "characters" | "spells";
 export default function HomeScreen() {
 	const [homeTab, setHomeTab] = useState<HomeTab>("characters");
 	const [ismodalOpen, setIsModalOpen] = useState(false);
+	const [isBackupOpen, setIsBackupOpen] = useState(false);
 	const { characters, addCharacter } = useCharacters();
 	const router = useRouter();
 
@@ -66,15 +69,31 @@ export default function HomeScreen() {
 					<ShieldIcon size={18} color={COLORS.accent} strokeWidth={1.5} />
 					<Text style={styles.brandText}>WELCOME, ADVENTURER</Text>
 				</View>
-				{homeTab === "characters" && characters.length > 0 && (
-					<TouchableOpacity
-						style={styles.addButton}
-						activeOpacity={0.8}
-						onPress={() => setIsModalOpen(true)}
-						accessibilityLabel="Створити нового персонажа"
-					>
-						<PlusIcon size={16} color={COLORS.accent} strokeWidth={2.2} />
-					</TouchableOpacity>
+				{homeTab === "characters" && (
+					<View style={styles.topActions}>
+						<TouchableOpacity
+							style={styles.addButton}
+							activeOpacity={0.8}
+							onPress={() => setIsBackupOpen(true)}
+							accessibilityLabel="Резервна копія"
+						>
+							<QuestBookIcon
+								size={16}
+								color={COLORS.accent}
+								strokeWidth={1.8}
+							/>
+						</TouchableOpacity>
+						{characters.length > 0 && (
+							<TouchableOpacity
+								style={styles.addButton}
+								activeOpacity={0.8}
+								onPress={() => setIsModalOpen(true)}
+								accessibilityLabel="Створити нового персонажа"
+							>
+								<PlusIcon size={16} color={COLORS.accent} strokeWidth={2.2} />
+							</TouchableOpacity>
+						)}
+					</View>
 				)}
 			</View>
 
@@ -194,6 +213,11 @@ export default function HomeScreen() {
 				onClose={() => setIsModalOpen(false)}
 				onSubmit={handleCreate}
 			/>
+
+			<BackupModal
+				visible={isBackupOpen}
+				onClose={() => setIsBackupOpen(false)}
+			/>
 		</SafeAreaView>
 	);
 }
@@ -221,6 +245,10 @@ const styles = StyleSheet.create({
 		fontSize: 15,
 		letterSpacing: 2,
 		color: COLORS.text,
+	},
+	topActions: {
+		flexDirection: "row",
+		gap: 10,
 	},
 	addButton: {
 		width: 32,

@@ -46,6 +46,7 @@
 		"ios": "expo start --ios",
 		"web": "expo start --web",
 		"build:apk": "eas build -p android --profile preview",
+		"deploy:web": "expo export -p web && eas deploy --prod",
 		"lint": "expo lint",
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write ."
